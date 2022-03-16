@@ -33,7 +33,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     }
 
     std::getline(configFile, line);
-    if (sscanf(line.c_str(), "%f %f", &res.x, &res.y) < 2) {
+    if (sscanf(line.c_str(), "%u %u", &width, &height) < 2) {
         std::cerr << "Could not parse resolution.\n";
         exit(EXIT_FAILURE);
     }
@@ -49,12 +49,14 @@ RenderingTask::RenderingTask(std::string rtcPath) {
         std::cerr << "Could not parse Look At.\n";
         exit(EXIT_FAILURE);
     }
+    lookAt = glm::normalize(lookAt);
 
     std::getline(configFile, line);
     if (sscanf(line.c_str(), "%f %f %f", &up.x, &up.y, &up.z) < 3) {
         std::cerr << "Could not parse Vector Up.\n";
         exit(EXIT_FAILURE);
     }
+    up = glm::normalize(up);
 
     std::getline(configFile, line);
     try {

@@ -13,7 +13,7 @@ class RenderingTask {
 public:
     std::string outputPath = "out.png";
     unsigned int recLvl;
-    glm::vec2 res;
+    unsigned int width, height;
     glm::vec3 viewPoint;
     glm::vec3 lookAt;
     glm::vec3 up = {0, 1, 0};
