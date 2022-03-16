@@ -5,8 +5,10 @@
 #include <assimp/scene.h> // Output data structure
 #include <assimp/postprocess.h> // Post processing flags
 #include <filesystem>
+#include <IL/devil_cpp_wrapper.hpp>
 
 #include "RenderingTask.hpp"
+#include "utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -88,4 +90,38 @@ RenderingTask::RenderingTask(std::string rtcPath) {
 
     for (int i = 0; i < scene->mNumMeshes; i++)
         meshes.emplace_back(scene->mMeshes[i], mats);
+}
+
+void RenderingTask::render() {
+    std::vector<unsigned char> imgData;
+    for (unsigned int py = 0; py < height; py++)
+        for (unsigned int px = 0; px < width; px++) {
+            glm::vec3 col = traceRay(getPrimaryRay(px, py), recLvl);
+            imgData.push_back(col.r * (unsigned char)(~0));
+            imgData.push_back(col.g * (unsigned char)(~0));
+            imgData.push_back(col.b * (unsigned char)(~0));
+        }
+    ilEnable(IL_FILE_OVERWRITE);
+    ilImage img;
+    if (!img.TexImage(width, height, 1, 3, IL_RGB, IL_UNSIGNED_BYTE, imgData.data())) {
+        ilLogErrorStack();
+        throw std::logic_error("Error constructing image.");
+    }
+    if (!img.Save(outputPath.c_str(), IL_PNG)) {
+        ilLogErrorStack();
+        throw std::logic_error("Error saving image.");
+    }
+}
+
+Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
+    Ray r = {viewPoint};
+    glm::vec3 front = glm::normalize(lookAt - viewPoint);
+    glm::vec3 right = glm::normalize(glm::cross(front, up)) * (float)width * yView / (float)height / 2.f;
+    r.d = front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f);
+    return r;
+}
+
+glm::vec3 RenderingTask::traceRay(Ray r, unsigned int maxDepth) {
+    // TODO actual ray tracing
+    return {0, 0, .5f};
 }

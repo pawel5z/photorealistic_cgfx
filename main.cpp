@@ -9,6 +9,7 @@ int main(int argc, const char *argv[]) {
     }
 
     RenderingTask rt(argv[1]);
-    // TODO raytrace
+    // TODO render
+    rt.render();
     return 0;
 }
