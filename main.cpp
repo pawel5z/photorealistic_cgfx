@@ -9,7 +9,6 @@ int main(int argc, const char *argv[]) {
     }
 
     RenderingTask rt(argv[1]);
-    // TODO render
     rt.render();
     return 0;
 }

@@ -37,7 +37,8 @@ private:
     std::vector<Mesh> meshes;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py);
-    glm::vec3 traceRay(Ray r, unsigned int maxDepth);
+    glm::vec3 traceRay(const Ray &r, unsigned int maxDepth);
+    bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat);
 };
 
 #endif // RENDERING_TASK_HPP

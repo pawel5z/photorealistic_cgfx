@@ -62,7 +62,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     front = glm::normalize(lookAt - viewPoint);
     up = glm::normalize(up);
     right = glm::normalize(glm::cross(front, up));
-    up = glm::normalize(glm::cross(right, front));
+    up = glm::normalize(glm::cross(right, front)) /* * yView / 2.f */;
     right *= (float)width * yView / (float)height / 2.f;
 
     std::getline(configFile, line);
@@ -119,11 +119,40 @@ void RenderingTask::render() {
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
     Ray r = {viewPoint};
-    r.d = front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f);
+    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f));
     return r;
 }
 
-glm::vec3 RenderingTask::traceRay(Ray r, unsigned int maxDepth) {
-    // TODO actual ray tracing
-    return {0, 0, .5f};
+glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) {
+    float t;
+    glm::vec3 n;
+    const Material *mat;
+    if (!findNearestIntersection(r, t, n, &mat))
+        return {0, 0, 0};
+    if (maxDepth == 0 || lights.size() == 0)
+        return mat->kd;
+    // TODO recursive call, shadow rays, reflected rays
+}
+
+bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) {
+    float tMin = std::numeric_limits<float>().max(), u, v;
+    Vertex a, b, c;
+    for (const auto &mesh : meshes) {
+        for (const auto &tri : mesh.triangles) {
+            a = mesh.vertices[tri.indices[0]];
+            b = mesh.vertices[tri.indices[1]];
+            c = mesh.vertices[tri.indices[2]];
+            if (!intersect_triangle(r.o, r.d, a.pos, b.pos, c.pos, &t, &u, &v))
+                continue;
+            if (t < tMin) {
+                tMin = t;
+                *mat = mesh.mat;
+            }
+        }
+    }
+    if (tMin == std::numeric_limits<float>().max())
+        return false;
+    t = tMin;
+    n = u * (b.norm - a.norm) + v * (c.norm - a.norm);
+    return true;
 }
