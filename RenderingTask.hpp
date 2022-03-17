@@ -16,6 +16,7 @@ struct Ray {
 
 class RenderingTask {
 public:
+    // given in rtc file
     std::string outputPath = "out.png";
     unsigned int recLvl;
     unsigned int width, height;
@@ -23,6 +24,9 @@ public:
     glm::vec3 lookAt;
     glm::vec3 up = {0, 1, 0};
     float yView = 1;
+    // inherited from above file
+    glm::vec3 front;
+    glm::vec3 right;
 
     RenderingTask(std::string path);
     void render();

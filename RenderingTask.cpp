@@ -58,7 +58,12 @@ RenderingTask::RenderingTask(std::string rtcPath) {
         std::cerr << "Could not parse Vector Up.\n";
         exit(EXIT_FAILURE);
     }
+    // make up perpendicular to front
+    front = glm::normalize(lookAt - viewPoint);
     up = glm::normalize(up);
+    right = glm::normalize(glm::cross(front, up));
+    up = glm::normalize(glm::cross(right, front));
+    right *= (float)width * yView / (float)height / 2.f;
 
     std::getline(configFile, line);
     try {
@@ -96,10 +101,9 @@ void RenderingTask::render() {
     std::vector<unsigned char> imgData;
     for (unsigned int py = 0; py < height; py++)
         for (unsigned int px = 0; px < width; px++) {
-            glm::vec3 col = traceRay(getPrimaryRay(px, py), recLvl);
-            imgData.push_back(col.r * (unsigned char)(~0));
-            imgData.push_back(col.g * (unsigned char)(~0));
-            imgData.push_back(col.b * (unsigned char)(~0));
+            glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
+            for (glm::length_t i = 0; i < col.length(); i++)
+                imgData.push_back(col[i]);
         }
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
@@ -115,8 +119,6 @@ void RenderingTask::render() {
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
     Ray r = {viewPoint};
-    glm::vec3 front = glm::normalize(lookAt - viewPoint);
-    glm::vec3 right = glm::normalize(glm::cross(front, up)) * (float)width * yView / (float)height / 2.f;
     r.d = front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f);
     return r;
 }
