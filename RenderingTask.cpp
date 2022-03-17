@@ -6,6 +6,7 @@
 #include <assimp/postprocess.h> // Post processing flags
 #include <filesystem>
 #include <IL/devil_cpp_wrapper.hpp>
+#include <glm/gtx/intersect.hpp>
 
 #include "RenderingTask.hpp"
 #include "utils.hpp"
@@ -51,7 +52,6 @@ RenderingTask::RenderingTask(std::string rtcPath) {
         std::cerr << "Could not parse Look At.\n";
         exit(EXIT_FAILURE);
     }
-    lookAt = glm::normalize(lookAt);
 
     std::getline(configFile, line);
     if (sscanf(line.c_str(), "%f %f %f", &up.x, &up.y, &up.z) < 3) {
@@ -62,7 +62,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     front = glm::normalize(lookAt - viewPoint);
     up = glm::normalize(up);
     right = glm::normalize(glm::cross(front, up));
-    up = glm::normalize(glm::cross(right, front)) /* * yView / 2.f */;
+    up = glm::normalize(glm::cross(right, front)) * yView / 2.f;
     right *= (float)width * yView / (float)height / 2.f;
 
     std::getline(configFile, line);
@@ -101,7 +101,7 @@ void RenderingTask::render() {
     std::vector<unsigned char> imgData;
     for (unsigned int py = 0; py < height; py++)
         for (unsigned int px = 0; px < width; px++) {
-            glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
+            glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(px, (height - 1 - py)), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
             for (glm::length_t i = 0; i < col.length(); i++)
                 imgData.push_back(col[i]);
         }
@@ -119,7 +119,7 @@ void RenderingTask::render() {
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
     Ray r = {viewPoint};
-    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f));
+    r.d = front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f);
     return r;
 }
 
@@ -135,24 +135,23 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) {
 }
 
 bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) {
-    float tMin = std::numeric_limits<float>().max(), u, v;
-    Vertex a, b, c;
-    for (const auto &mesh : meshes) {
+    float tNearest = std::numeric_limits<float>().max();
+    glm::vec2 baryPos;
+    for (const auto &mesh : meshes)
         for (const auto &tri : mesh.triangles) {
-            a = mesh.vertices[tri.indices[0]];
-            b = mesh.vertices[tri.indices[1]];
-            c = mesh.vertices[tri.indices[2]];
-            if (!intersect_triangle(r.o, r.d, a.pos, b.pos, c.pos, &t, &u, &v))
+            Vertex a = mesh.vertices[tri.indices[0]];
+            Vertex b = mesh.vertices[tri.indices[1]];
+            Vertex c = mesh.vertices[tri.indices[2]];
+            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (t < tMin) {
-                tMin = t;
+            if (t < tNearest) {
+                tNearest = t;
+                n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
                 *mat = mesh.mat;
             }
         }
-    }
-    if (tMin == std::numeric_limits<float>().max())
+    if (tNearest == std::numeric_limits<float>().max())
         return false;
-    t = tMin;
-    n = u * (b.norm - a.norm) + v * (c.norm - a.norm);
+    t = tNearest;
     return true;
 }
