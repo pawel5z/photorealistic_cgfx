@@ -99,12 +99,11 @@ RenderingTask::RenderingTask(std::string rtcPath) {
 
 void RenderingTask::render() {
     std::vector<unsigned char> imgData;
-    for (unsigned int py = 0; py < height; py++)
-        for (unsigned int px = 0; px < width; px++) {
-            glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(px, (height - 1 - py)), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
-            for (glm::length_t i = 0; i < col.length(); i++)
-                imgData.push_back(col[i]);
-        }
+    for (unsigned int p = 0; p < width * height; p++) {
+        glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
+        for (glm::length_t i = 0; i < col.length(); i++)
+            imgData.push_back(col[i]);
+    }
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
     if (!img.TexImage(width, height, 1, 3, IL_RGB, IL_UNSIGNED_BYTE, imgData.data())) {
