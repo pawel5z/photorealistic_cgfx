@@ -58,4 +58,9 @@
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode
 
+**/*.rtc
+**/*.obj
+**/*.mtl
+**/*.png
+
 raytrace
