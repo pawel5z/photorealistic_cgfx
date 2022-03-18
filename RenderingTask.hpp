@@ -40,6 +40,7 @@ private:
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth);
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat);
     bool isObstructed(const Ray &r);
+    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count);
 };
 
 #endif // RENDERING_TASK_HPP

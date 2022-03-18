@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -std=c++17 -O3
-LFLAGS = -lassimp -lIL -lILU
+LFLAGS = -lassimp -lIL -lILU -lpthread
 NAME = raytrace
 
 OBJS = $(shell ls *.cpp | sed 's/\.cpp/\.o/')

@@ -8,6 +8,7 @@
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/norm.hpp>
 #include <iostream>
+#include <thread>
 
 #include "RenderingTask.hpp"
 #include "utils.hpp"
@@ -98,11 +99,18 @@ RenderingTask::RenderingTask(std::string rtcPath) {
 }
 
 void RenderingTask::render() {
-    std::vector<unsigned char> imgData;
-    for (unsigned int p = 0; p < width * height; p++) {
-        glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
-        for (glm::length_t i = 0; i < col.length(); i++)
-            imgData.push_back(col[i]);
+    std::vector<unsigned char> imgData(width * height * 3);
+    auto procCnt = std::thread::hardware_concurrency();
+    if (std::thread::hardware_concurrency() <= 1) {
+        renderBatch(imgData, 0, width * height);
+    } else {
+        std::vector<std::thread> ts;
+        for (unsigned int i = 0; i < procCnt; i++) {
+            unsigned int minBatchSize = width * height / procCnt;
+            ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize, i != procCnt - 1 ? minBatchSize : width * height - i * minBatchSize);
+        }
+        for (auto &t : ts)
+            t.join();
     }
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
@@ -183,4 +191,12 @@ bool RenderingTask::isObstructed(const Ray &r) {
                     return true;
         }
     return false;
+}
+
+void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from, const unsigned int count) {
+    for (unsigned int p = from; p < from + count; p++) {
+        glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
+        for (glm::length_t i = 0; i < col.length(); i++)
+            imgData[3 * p + i] = col[i];
+    }
 }
