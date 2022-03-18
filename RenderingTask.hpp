@@ -29,18 +29,18 @@ public:
     glm::vec3 right;
 
     RenderingTask(std::string path);
-    void render();
+    void render() const;
 
 private:
     std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
 
-    Ray getPrimaryRay(unsigned int px, unsigned int py);
-    glm::vec3 traceRay(const Ray &r, unsigned int maxDepth);
-    bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat);
-    bool isObstructed(const Ray &r);
-    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count);
+    Ray getPrimaryRay(unsigned int px, unsigned int py) const;
+    glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;
+    bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
+    bool isObstructed(const Ray &r) const;
+    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count) const;
 };
 
 #endif // RENDERING_TASK_HPP

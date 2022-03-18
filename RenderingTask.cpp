@@ -98,7 +98,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
         meshes.emplace_back(scene->mMeshes[i], mats);
 }
 
-void RenderingTask::render() {
+void RenderingTask::render() const {
     std::vector<unsigned char> imgData(width * height * 3);
     auto procCnt = std::thread::hardware_concurrency();
     if (std::thread::hardware_concurrency() <= 1) {
@@ -124,13 +124,13 @@ void RenderingTask::render() {
     }
 }
 
-Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
+Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
     Ray r = {viewPoint};
     r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f));
     return r;
 }
 
-glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) {
+glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
     float t;
     glm::vec3 n;
     const Material *mat;
@@ -155,7 +155,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) {
     return color;
 }
 
-bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) {
+bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const {
     float tNearest = std::numeric_limits<float>::max();
     glm::vec2 baryPos;
     for (const auto &mesh : meshes)
@@ -178,7 +178,7 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
     return true;
 }
 
-bool RenderingTask::isObstructed(const Ray &r) {
+bool RenderingTask::isObstructed(const Ray &r) const {
     for (const auto &mesh : meshes)
         for (const auto &tri : mesh.triangles) {
             Vertex a = mesh.vertices[tri.indices[0]];
@@ -193,7 +193,7 @@ bool RenderingTask::isObstructed(const Ray &r) {
     return false;
 }
 
-void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from, const unsigned int count) {
+void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from, const unsigned int count) const {
     for (unsigned int p = from; p < from + count; p++) {
         glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
         for (glm::length_t i = 0; i < col.length(); i++)
