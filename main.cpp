@@ -4,7 +4,7 @@
 
 int main(int argc, const char *argv[]) {
     if (argc <= 1) {
-        std::cerr << "Usage: ./raytrace config_file\n";
+        std::cerr << "Usage: ./raytrace RTC_FILE\n";
         exit(EXIT_FAILURE);
     }
 

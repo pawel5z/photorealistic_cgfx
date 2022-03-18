@@ -84,7 +84,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     }
 
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals);
+    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FixInfacingNormals);
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << '\n';
         throw std::logic_error("Error while importing \"" + objPath + "\".\n");
