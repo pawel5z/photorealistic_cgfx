@@ -1,9 +1,9 @@
 #ifndef RENDERING_TASK_HPP
 #define RENDERING_TASK_HPP
 
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
 
 #include "Light.hpp"
 #include "Material.hpp"
@@ -39,6 +39,7 @@ private:
     Ray getPrimaryRay(unsigned int px, unsigned int py);
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth);
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat);
+    bool isObstructed(const Ray &r);
 };
 
 #endif // RENDERING_TASK_HPP

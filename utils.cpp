@@ -1,6 +1,6 @@
-#include <iostream>
 #include <IL/il.h>
 #include <IL/ilu.h>
+#include <iostream>
 
 #include "utils.hpp"
 

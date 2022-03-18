@@ -1,12 +1,13 @@
-#include <fstream>
-#include <cstdio>
-#include <iostream>
-#include <assimp/Importer.hpp> // C++ importer interface
-#include <assimp/scene.h> // Output data structure
-#include <assimp/postprocess.h> // Post processing flags
-#include <filesystem>
 #include <IL/devil_cpp_wrapper.hpp>
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/scene.h>       // Output data structure
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtx/norm.hpp>
+#include <iostream>
 
 #include "RenderingTask.hpp"
 #include "utils.hpp"
@@ -55,9 +56,17 @@ RenderingTask::RenderingTask(std::string rtcPath) {
 
     std::getline(configFile, line);
     if (sscanf(line.c_str(), "%f %f %f", &up.x, &up.y, &up.z) < 3) {
-        std::cerr << "Could not parse Vector Up.\n";
-        exit(EXIT_FAILURE);
+        std::cerr << "Could not parse Vector Up. Using default (0, 1, 0).\n";
     }
+
+    std::getline(configFile, line);
+    try {
+        yView = std::stof(line);
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << '\n'
+                  << "Could not parse yview. Using default 1.0.\n";
+    }
+
     // make up perpendicular to front
     front = glm::normalize(lookAt - viewPoint);
     up = glm::normalize(up);
@@ -65,26 +74,17 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     up = glm::normalize(glm::cross(right, front)) * yView / 2.f;
     right *= (float)width * yView / (float)height / 2.f;
 
-    std::getline(configFile, line);
-    try {
-        yView = std::stof(line);
-    } catch(const std::exception &e) {
-        std::cerr << e.what() << '\n'
-            << "Could not parse yview. Using default 1.0.\n";
-    }
-
     while (!configFile.eof()) {
         try {
             std::getline(configFile, line);
             lights.emplace_back(line);
-        }
-        catch (std::exception &e) {
+        } catch (std::exception &e) {
             std::cerr << e.what() << '\n';
         }
     }
 
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate);
+    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals);
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << '\n';
         throw std::logic_error("Error while importing \"" + objPath + "\".\n");
@@ -119,7 +119,7 @@ void RenderingTask::render() {
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) {
     Ray r = {viewPoint};
-    r.d = front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f);
+    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f));
     return r;
 }
 
@@ -131,11 +131,25 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) {
         return {0, 0, 0};
     if (maxDepth == 0 || lights.size() == 0)
         return mat->kd;
-    // TODO recursive call, shadow rays, reflected rays
+    glm::vec3 color = mat->ka;
+    glm::vec3 hit = r.o + t * r.d;
+    glm::vec3 viewer = -r.d;
+    for (auto &light : lights) {
+        Ray shadowRay = {hit, glm::normalize(light.pos - hit)};
+        float sqDist = glm::distance2(hit, light.pos);
+        if (isObstructed(shadowRay))
+            continue;
+        float dTerm = glm::dot(n, shadowRay.d);
+        color += (mat->kd * glm::max(0.f, dTerm) +
+                  mat->ks * (dTerm > 0.f ? glm::max(0.f, glm::pow(glm::dot(viewer, glm::reflect(shadowRay.d, n)), mat->ns)) : 0.f)) *
+                 light.color * light.intensity / (4.f * glm::pi<float>() * sqDist);
+    }
+    color += mat->ks * traceRay({r.o + t * r.d, glm::reflect(viewer, n)}, maxDepth - 1);
+    return color;
 }
 
 bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) {
-    float tNearest = std::numeric_limits<float>().max();
+    float tNearest = std::numeric_limits<float>::max();
     glm::vec2 baryPos;
     for (const auto &mesh : meshes)
         for (const auto &tri : mesh.triangles) {
@@ -144,14 +158,30 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
             Vertex c = mesh.vertices[tri.indices[2]];
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (t < tNearest) {
+            if (.001f < t && t < tNearest) {
                 tNearest = t;
                 n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
                 *mat = mesh.mat;
             }
         }
-    if (tNearest == std::numeric_limits<float>().max())
+    if (tNearest == std::numeric_limits<float>::max())
         return false;
     t = tNearest;
+    n = glm::normalize(n);
     return true;
+}
+
+bool RenderingTask::isObstructed(const Ray &r) {
+    for (const auto &mesh : meshes)
+        for (const auto &tri : mesh.triangles) {
+            Vertex a = mesh.vertices[tri.indices[0]];
+            Vertex b = mesh.vertices[tri.indices[1]];
+            Vertex c = mesh.vertices[tri.indices[2]];
+            glm::vec2 baryPos;
+            float t;
+            if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+                if (t > .001f)
+                    return true;
+        }
+    return false;
 }
