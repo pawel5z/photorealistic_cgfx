@@ -214,8 +214,7 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
     Camera camera(glm::degrees(glm::atan(rt->yView / 2.f)), aspect, .1f, 10000.f);
     camera.pos = rt->viewPoint;
     camera.rot = glm::quatLookAtLH(glm::normalize(rt->lookAt - rt->viewPoint), rt->up);
-    float spd = .1f;
-    float angSpd = .001f;
+    float spd = 1.f, spdMult = 1.f, angSpd = .001f;
 
     Axes axes("axes.vert", "axes.frag");
 
@@ -250,7 +249,7 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
         glUseProgram(meshPId);
         glUniformMatrix4fv(0, 1, false, &camera.getPVMat()[0][0]);
         for (unsigned int i = 0; i < rt->meshes.size(); i++) {
-            glUniform3fv(1, 1, &rt->mats[i].kd[0]);
+            glUniform3fv(1, 1, &rt->meshes[i].mat->kd[0]);
             glBindVertexArray(arrays[i]);
             glDrawElements(GL_TRIANGLES, rt->meshes[i].triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         }
@@ -261,17 +260,17 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
         // >>> process events
         camera.setAspect(aspect);
         if (glfwGetKey(win(), GLFW_KEY_W) == GLFW_PRESS)
-            camera.pos += camera.forward() * spd;
+            camera.pos += camera.forward() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_S) == GLFW_PRESS)
-            camera.pos -= camera.forward() * spd;
+            camera.pos -= camera.forward() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_D) == GLFW_PRESS)
-            camera.pos += camera.right() * spd;
+            camera.pos += camera.right() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_A) == GLFW_PRESS)
-            camera.pos -= camera.right() * spd;
+            camera.pos -= camera.right() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_R) == GLFW_PRESS)
-            camera.pos += camera.up() * spd;
+            camera.pos += camera.up() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_F) == GLFW_PRESS)
-            camera.pos -= camera.up() * spd;
+            camera.pos -= camera.up() * spd * spdMult;
         if (glfwGetKey(win(), GLFW_KEY_E) == GLFW_PRESS)
             camera.rotate(Transform::FORWARD, angSpd * 5.f);
         if (glfwGetKey(win(), GLFW_KEY_Q) == GLFW_PRESS)
@@ -286,6 +285,12 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
             camera.pos = rt->viewPoint;
             camera.rot = glm::quatLookAtLH(glm::normalize(rt->lookAt - rt->viewPoint), rt->up);
         }
+        if (glfwGetKey(win(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            spdMult = 10.f;
+        else if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+            spdMult = .1f;
+        else
+            spdMult = 1.f;
         glfwGetCursorPos(win(), &refMouseX, &refMouseY);
         // <<< process events
         WaitForFixedFPS();
