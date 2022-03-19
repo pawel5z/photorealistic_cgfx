@@ -1,15 +1,15 @@
 CC = g++
 CFLAGS = -std=c++17 -O3
-LFLAGS = -lassimp -lIL -lILU -lpthread
+LFLAGS = -lassimp -lIL -lILU -lpthread -lepoxy -lGL -lglfw
 NAME = raytrace
 
-OBJS = $(shell ls *.cpp | sed 's/\.cpp/\.o/')
-DEPS = $(shell ls *.hpp)
+OBJS = $(shell find . -name '*.cpp' | sed 's/\.cpp/\.o/')
+DEPS = $(shell find . -name '*.hpp')
 
 all: $(NAME)
 
 $(NAME) : $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $(NAME) $(LFLAGS)
+	$(CC) $(CFLAGS) -o $(NAME) $^ $(LFLAGS)
 
 debug : CFLAGS += -Og -g
 debug : $(NAME)
@@ -18,7 +18,7 @@ debug : $(NAME)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean :
-	@rm -f *.o
+	@find . -name '*.o' -delete
 
 distclean : clean
 	@rm -f $(NAME)

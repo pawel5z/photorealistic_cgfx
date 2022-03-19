@@ -8,6 +8,7 @@
 #include "Light.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
+#include "ogl_interface/AGL3Window.hpp"
 
 struct Ray {
     glm::vec3 o; // origin
@@ -30,8 +31,12 @@ public:
 
     RenderingTask(std::string path);
     void render() const;
+    void preview();
 
 private:
+    class RTWindow;
+    friend RTWindow;
+
     std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
@@ -41,6 +46,12 @@ private:
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r) const;
     void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count) const;
+};
+
+class RenderingTask::RTWindow : public AGLWindow {
+public:
+    void MainLoop(RenderingTask *rt);
+    void KeyCB(int key, int scancode, int action, int mods) override;
 };
 
 #endif // RENDERING_TASK_HPP

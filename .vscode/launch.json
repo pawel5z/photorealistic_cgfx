@@ -9,9 +9,11 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/raytrace",
-            "args": ["../view_test/view_test.rtc"],
+            "args": [
+                "${workspaceFolder}/examples/holodeck.rtc"
+            ],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
