@@ -1,5 +1,3 @@
-#include "ogl_interface/Axes.hpp"
-#include "ogl_interface/Camera.hpp"
 #include <IL/devil_cpp_wrapper.hpp>
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
@@ -10,9 +8,12 @@
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/norm.hpp>
 #include <iostream>
+#include <numeric>
 #include <thread>
 
 #include "RenderingTask.hpp"
+#include "ogl_interface/Axes.hpp"
+#include "ogl_interface/Camera.hpp"
 #include "utils.hpp"
 
 namespace fs = std::filesystem;
@@ -96,19 +97,28 @@ RenderingTask::RenderingTask(std::string rtcPath) : rtcPath(rtcPath) {
 
 void RenderingTask::render() const {
     std::vector<unsigned char> imgData(width * height * 3);
-    auto procCnt = std::thread::hardware_concurrency();
-    if (std::thread::hardware_concurrency() <= 1) {
-        renderBatch(imgData, 0, width * height);
-    } else {
-        std::vector<std::thread> ts;
-        for (unsigned int i = 0; i < procCnt; i++) {
-            unsigned int minBatchSize = width * height / procCnt;
-            ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
-                            i != procCnt - 1 ? minBatchSize : width * height - i * minBatchSize);
-        }
-        for (auto &t : ts)
-            t.join();
+    unsigned int threadsCnt = std::max(1U, std::thread::hardware_concurrency());
+    std::vector<unsigned int> progress(threadsCnt);
+    std::vector<std::thread> ts;
+    unsigned int minBatchSize = width * height / threadsCnt;
+    for (unsigned int i = 0; i < threadsCnt; i++) {
+        ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
+                        i != threadsCnt - 1 ? minBatchSize : width * height - i * minBatchSize,
+                        std::ref(progress[i]));
     }
+    while (true) {
+        unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
+        std::cout
+            << "\r" << progressSoFar * 100 / (width * height)
+            << "%                                                                                ";
+        if (progressSoFar == width * height)
+            break;
+        std::this_thread::yield();
+    }
+    std::cout << "\n";
+    for (auto &t : ts)
+        t.join();
+
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
     if (!img.TexImage(width, height, 1, 3, IL_RGB, IL_UNSIGNED_BYTE, imgData.data())) {
@@ -227,7 +237,7 @@ bool RenderingTask::isObstructed(const Ray &r) const {
 }
 
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
-                                const unsigned int count) const {
+                                const unsigned int count, unsigned int &progress) const {
     for (unsigned int p = from; p < from + count; p++) {
         glm::vec3 col = glm::clamp(
             glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f,
@@ -236,6 +246,7 @@ void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsig
             0.f, 255.f);
         for (glm::length_t i = 0; i < col.length(); i++)
             imgData[3 * p + i] = col[i];
+        progress++;
     }
 }
 
