@@ -9,6 +9,7 @@
 #include "Material.hpp"
 #include "Mesh.hpp"
 #include "ogl_interface/AGL3Window.hpp"
+#include "ogl_interface/Camera.hpp"
 
 struct Ray {
     glm::vec3 o; // origin
@@ -17,7 +18,9 @@ struct Ray {
 
 class RenderingTask {
 public:
+    std::string rtcPath;
     // given in rtc file
+    std::string origObjPath;
     std::string outputPath = "out.png";
     unsigned int recLvl;
     unsigned int width, height;
@@ -33,6 +36,8 @@ public:
     RenderingTask(std::string path);
     void render() const;
     void preview();
+    friend std::ostream &operator<<(std::ostream &os, const RenderingTask *rt);
+    void updateRTCFile();
 
 private:
     class RTWindow;
@@ -53,8 +58,14 @@ private:
 
 class RenderingTask::RTWindow : public AGLWindow {
 public:
-    void MainLoop(RenderingTask *rt);
+    RTWindow(RenderingTask *rt);
+
+    void MainLoop();
     void KeyCB(int key, int scancode, int action, int mods) override;
+
+private:
+    RenderingTask *rt;
+    void updateRTCamera(const Camera &camera);
 };
 
 #endif // RENDERING_TASK_HPP

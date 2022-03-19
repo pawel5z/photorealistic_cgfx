@@ -1,9 +1,9 @@
 #ifndef LIGHT_HPP
 #define LIGHT_HPP
 
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
 
 class Light {
 public:
@@ -12,6 +12,7 @@ public:
     float intensity;
 
     Light(std::string spec);
+    std::vector<unsigned char> getByteColor() const;
 };
 
 #endif // LIGHT_HPP

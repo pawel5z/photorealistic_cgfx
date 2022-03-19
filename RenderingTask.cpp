@@ -17,19 +17,18 @@
 
 namespace fs = std::filesystem;
 
-RenderingTask::RenderingTask(std::string rtcPath) {
+RenderingTask::RenderingTask(std::string rtcPath) : rtcPath(rtcPath) {
     std::ifstream configFile(rtcPath);
     fs::path rtcDir = fs::path(rtcPath).parent_path();
     std::string line;
 
     std::getline(configFile, line); // ignore comment line
 
-    std::string objPath;
-    std::getline(configFile, objPath);
+    std::getline(configFile, origObjPath);
+    std::string objPath = origObjPath;
     objPath = fs::path(rtcDir).append(objPath).string();
 
     std::getline(configFile, outputPath);
-    outputPath = fs::path(rtcDir).append(outputPath).string();
 
     std::getline(configFile, line);
     try {
@@ -123,9 +122,33 @@ void RenderingTask::render() const {
 }
 
 void RenderingTask::preview() {
-    RTWindow window;
+    RTWindow window(this);
     window.Init(1280, 720, "Preview");
-    window.MainLoop(this);
+    window.MainLoop();
+}
+
+void RenderingTask::updateRTCFile() {
+    std::ofstream fout(rtcPath);
+    fout << this;
+}
+
+std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
+    os << "#\n"
+       << rt->origObjPath << '\n'
+       << rt->outputPath << '\n'
+       << rt->recLvl << '\n'
+       << rt->width << ' ' << rt->height << '\n'
+       << rt->viewPoint.x << ' ' << rt->viewPoint.y << ' ' << rt->viewPoint.z << '\n'
+       << rt->lookAt.x << ' ' << rt->lookAt.y << ' ' << rt->lookAt.z << '\n'
+       << rt->up.x << ' ' << rt->up.y << ' ' << rt->up.z << '\n'
+       << rt->yView << '\n';
+    for (const auto &light : rt->lights) {
+        std::vector<unsigned char> byteCol = light.getByteColor();
+        os << "L " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
+           << (int)byteCol[0] << ' ' << (int)byteCol[1] << ' ' << (int)byteCol[2] << ' '
+           << light.intensity << '\n';
+    }
+    return os;
 }
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
@@ -225,7 +248,9 @@ void RenderingTask::recomputeCameraParams() {
     right *= (float)width * yView / (float)height / 2.f;
 }
 
-void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
+RenderingTask::RTWindow::RTWindow(RenderingTask *rt) : rt(rt) {}
+
+void RenderingTask::RTWindow::MainLoop() {
     ViewportOne(0, 0, wd, ht);
     Camera camera(glm::degrees(glm::atan(rt->yView / 2.f)), aspect, .1f, 10000.f);
     camera.pos = rt->viewPoint;
@@ -310,15 +335,14 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
             if (std::numeric_limits<float>::epsilon() * 2.f <= spdMult)
                 spdMult /= 2.f;
         if (glfwGetKey(win(), GLFW_KEY_SPACE)) {
-            rt->viewPoint = camera.pos;
-            rt->lookAt = camera.pos + camera.forward();
-            rt->up = camera.up();
-            rt->recomputeCameraParams();
+            updateRTCamera(camera);
             rt->renderPreview = true;
             break;
         }
         if (glfwGetKey(win(), GLFW_KEY_ENTER)) {
-            // TODO update rtc file
+            updateRTCamera(camera);
+            rt->updateRTCFile();
+            std::cout << "Saved changes to \"" << rt->rtcPath << "\".\n";
         }
         glfwGetCursorPos(win(), &refMouseX, &refMouseY);
         // <<< process events
@@ -331,3 +355,10 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
 }
 
 void RenderingTask::RTWindow::KeyCB(int key, int scancode, int action, int mods) {}
+
+void RenderingTask::RTWindow::updateRTCamera(const Camera &camera) {
+    rt->viewPoint = camera.pos;
+    rt->lookAt = camera.pos + camera.forward();
+    rt->up = camera.up();
+    rt->recomputeCameraParams();
+}
