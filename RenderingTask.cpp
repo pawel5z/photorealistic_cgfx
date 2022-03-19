@@ -69,12 +69,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
         std::cerr << e.what() << '\n' << "Could not parse yview. Using default 1.0.\n";
     }
 
-    // make up perpendicular to front
-    front = glm::normalize(lookAt - viewPoint);
-    up = glm::normalize(up);
-    right = glm::normalize(glm::cross(front, up));
-    up = glm::normalize(glm::cross(right, front)) * yView / 2.f;
-    right *= (float)width * yView / (float)height / 2.f;
+    recomputeCameraParams();
 
     while (!configFile.eof()) {
         try {
@@ -221,6 +216,15 @@ void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsig
     }
 }
 
+void RenderingTask::recomputeCameraParams() {
+    // make up perpendicular to front
+    front = glm::normalize(lookAt - viewPoint);
+    up = glm::normalize(up);
+    right = glm::normalize(glm::cross(front, up));
+    up = glm::normalize(glm::cross(right, front)) * yView / 2.f;
+    right *= (float)width * yView / (float)height / 2.f;
+}
+
 void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
     ViewportOne(0, 0, wd, ht);
     Camera camera(glm::degrees(glm::atan(rt->yView / 2.f)), aspect, .1f, 10000.f);
@@ -305,6 +309,17 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
         if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
             if (std::numeric_limits<float>::epsilon() * 2.f <= spdMult)
                 spdMult /= 2.f;
+        if (glfwGetKey(win(), GLFW_KEY_SPACE)) {
+            rt->viewPoint = camera.pos;
+            rt->lookAt = camera.pos + camera.forward();
+            rt->up = camera.up();
+            rt->recomputeCameraParams();
+            rt->renderPreview = true;
+            break;
+        }
+        if (glfwGetKey(win(), GLFW_KEY_ENTER)) {
+            // TODO update rtc file
+        }
         glfwGetCursorPos(win(), &refMouseX, &refMouseY);
         // <<< process events
         WaitForFixedFPS();

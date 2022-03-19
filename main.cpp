@@ -51,7 +51,7 @@ int main(int argc, const char *argv[]) {
     RenderingTask rt(vm.at("rtc_file").as<std::string>());
     if (vm.at("preview").as<bool>())
         rt.preview();
-    else
+    if (rt.renderPreview || !vm.at("preview").as<bool>())
         rt.render();
     return 0;
 }

@@ -28,6 +28,7 @@ public:
     // inherited from above file
     glm::vec3 front;
     glm::vec3 right;
+    bool renderPreview = false;
 
     RenderingTask(std::string path);
     void render() const;
@@ -47,6 +48,7 @@ private:
     bool isObstructed(const Ray &r) const;
     void renderBatch(std::vector<unsigned char> &imgData, unsigned int from,
                      unsigned int count) const;
+    void recomputeCameraParams();
 };
 
 class RenderingTask::RTWindow : public AGLWindow {
