@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "Light.hpp"
@@ -33,7 +34,7 @@ public:
     glm::vec3 right;
     bool renderPreview = false;
 
-    RenderingTask(std::string path);
+    RenderingTask(std::string path, unsigned int concThreads = std::thread::hardware_concurrency());
     void render() const;
     void preview();
     friend std::ostream &operator<<(std::ostream &os, const RenderingTask *rt);
@@ -46,6 +47,7 @@ private:
     std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
+    unsigned int concThreads;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;

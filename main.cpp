@@ -18,6 +18,9 @@ int main(int argc, const char *argv[]) {
         "Options");
     desc.add_options()                                           //
         ("help,h", po::bool_switch(), "print this help message") //
+        ("threads,n", po::value<int>()->default_value(-1),
+         "Number of threads used for rendering. -1 (default) means number of available CPU "
+         "cores.") //
         ("preview,p", po::bool_switch(),
          "preview scene\n"
          "Controls:\n"
@@ -48,7 +51,7 @@ int main(int argc, const char *argv[]) {
         return 0;
     }
 
-    RenderingTask rt(vm.at("rtc_file").as<std::string>());
+    RenderingTask rt(vm.at("rtc_file").as<std::string>(), vm.at("threads").as<int>());
     if (vm.at("preview").as<bool>())
         rt.preview();
     if (rt.renderPreview || !vm.at("preview").as<bool>())

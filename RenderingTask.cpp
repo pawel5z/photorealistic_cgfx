@@ -18,7 +18,9 @@
 
 namespace fs = std::filesystem;
 
-RenderingTask::RenderingTask(std::string rtcPath) : rtcPath(rtcPath) {
+RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rtcPath(rtcPath) {
+    this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
+
     std::ifstream configFile(rtcPath);
     fs::path rtcDir = fs::path(rtcPath).parent_path();
     std::string line;
@@ -97,18 +99,18 @@ RenderingTask::RenderingTask(std::string rtcPath) : rtcPath(rtcPath) {
 
 void RenderingTask::render() const {
     std::vector<unsigned char> imgData(width * height * 3);
-    unsigned int threadsCnt = std::max(1U, std::thread::hardware_concurrency());
-    std::vector<unsigned int> progress(threadsCnt);
+    std::vector<unsigned int> progress(concThreads);
     std::vector<std::thread> ts;
-    unsigned int minBatchSize = width * height / threadsCnt;
-    for (unsigned int i = 0; i < threadsCnt; i++) {
+    unsigned int minBatchSize = width * height / concThreads;
+    for (unsigned int i = 0; i < concThreads; i++) {
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
-                        i != threadsCnt - 1 ? minBatchSize : width * height - i * minBatchSize,
+                        i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
                         std::ref(progress[i]));
     }
+    std::cout << "Rendering using " << concThreads << " threads.\n";
     while (true) {
         unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
-        std::cout
+        std::cerr
             << "\r" << progressSoFar * 100 / (width * height)
             << "%                                                                                ";
         if (progressSoFar == width * height)
