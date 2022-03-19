@@ -35,9 +35,7 @@ int main(int argc, const char *argv[]) {
          " esc: \tquit\n");
 
     po::variables_map vm;
-    po::store(
-        po::command_line_parser(argc, argv).options(desc).positional(pd).run(),
-        vm);
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(pd).run(), vm);
     po::notify(vm);
 
     if (!vm.count("rtc_file") || vm.count("help")) {

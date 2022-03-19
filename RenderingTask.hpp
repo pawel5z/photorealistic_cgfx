@@ -45,7 +45,8 @@ private:
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r) const;
-    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count) const;
+    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from,
+                     unsigned int count) const;
 };
 
 class RenderingTask::RTWindow : public AGLWindow {

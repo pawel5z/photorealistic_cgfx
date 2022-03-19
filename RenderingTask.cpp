@@ -66,8 +66,7 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     try {
         yView = std::stof(line);
     } catch (const std::exception &e) {
-        std::cerr << e.what() << '\n'
-                  << "Could not parse yview. Using default 1.0.\n";
+        std::cerr << e.what() << '\n' << "Could not parse yview. Using default 1.0.\n";
     }
 
     // make up perpendicular to front
@@ -87,7 +86,8 @@ RenderingTask::RenderingTask(std::string rtcPath) {
     }
 
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FixInfacingNormals);
+    const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals |
+                                                          aiProcess_FixInfacingNormals);
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << '\n';
         throw std::logic_error("Error while importing \"" + objPath + "\".\n");
@@ -109,7 +109,8 @@ void RenderingTask::render() const {
         std::vector<std::thread> ts;
         for (unsigned int i = 0; i < procCnt; i++) {
             unsigned int minBatchSize = width * height / procCnt;
-            ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize, i != procCnt - 1 ? minBatchSize : width * height - i * minBatchSize);
+            ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
+                            i != procCnt - 1 ? minBatchSize : width * height - i * minBatchSize);
         }
         for (auto &t : ts)
             t.join();
@@ -134,7 +135,8 @@ void RenderingTask::preview() {
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
     Ray r = {viewPoint};
-    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) + right * ((float)px * 2.f / (float)(width - 1) - 1.f));
+    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) +
+                         right * ((float)px * 2.f / (float)(width - 1) - 1.f));
     return r;
 }
 
@@ -155,15 +157,20 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
         if (isObstructed(shadowRay))
             continue;
         float dTerm = glm::dot(n, shadowRay.d);
-        color += (mat->kd * glm::max(0.f, dTerm) +
-                  mat->ks * (dTerm > 0.f ? glm::max(0.f, glm::pow(glm::dot(viewer, glm::reflect(shadowRay.d, n)), mat->ns)) : 0.f)) *
-                 light.color * light.intensity / (4.f * glm::pi<float>() * sqDist);
+        color +=
+            (mat->kd * glm::max(0.f, dTerm) +
+             mat->ks * (dTerm > 0.f
+                            ? glm::max(0.f, glm::pow(glm::dot(viewer, glm::reflect(shadowRay.d, n)),
+                                                     mat->ns))
+                            : 0.f)) *
+            light.color * light.intensity / (4.f * glm::pi<float>() * sqDist);
     }
     color += mat->ks * traceRay({r.o + t * r.d, glm::reflect(viewer, n)}, maxDepth - 1);
     return color;
 }
 
-bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const {
+bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n,
+                                            const Material **mat) const {
     float tNearest = std::numeric_limits<float>::max();
     glm::vec2 baryPos;
     for (const auto &mesh : meshes)
@@ -201,9 +208,14 @@ bool RenderingTask::isObstructed(const Ray &r) const {
     return false;
 }
 
-void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from, const unsigned int count) const {
+void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
+                                const unsigned int count) const {
     for (unsigned int p = from; p < from + count; p++) {
-        glm::vec3 col = glm::clamp(glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f, 1.f) * 255.f, 0.f, 255.f);
+        glm::vec3 col = glm::clamp(
+            glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f,
+                       1.f) *
+                255.f,
+            0.f, 255.f);
         for (glm::length_t i = 0; i < col.length(); i++)
             imgData[3 * p + i] = col[i];
     }
@@ -230,9 +242,11 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
         auto &mesh = rt->meshes[i];
         glBindVertexArray(arrays[i]);
         glBindBuffer(GL_ARRAY_BUFFER, buffers[i]);
-        glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(),
+                     GL_STATIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffers[i]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.triangles.size() * sizeof(Triangle), mesh.triangles.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.triangles.size() * sizeof(Triangle),
+                     mesh.triangles.data(), GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, false, 2 * sizeof(glm::vec3), nullptr);
     }
@@ -240,8 +254,7 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     double refMouseX = 0, refMouseY = 0;
-    while (glfwGetKey(win(), GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-           glfwWindowShouldClose(win()) == 0) {
+    while (glfwGetKey(win(), GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(win()) == 0) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         AGLErrors("before drawing");
         // >>> render
@@ -251,7 +264,8 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
         for (unsigned int i = 0; i < rt->meshes.size(); i++) {
             glUniform3fv(1, 1, &rt->meshes[i].mat->kd[0]);
             glBindVertexArray(arrays[i]);
-            glDrawElements(GL_TRIANGLES, rt->meshes[i].triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, rt->meshes[i].triangles.size() * 3, GL_UNSIGNED_INT,
+                           nullptr);
         }
         // <<< render
         AGLErrors("after drawing");
