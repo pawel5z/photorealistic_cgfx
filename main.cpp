@@ -9,12 +9,14 @@ int main(int argc, const char *argv[]) {
     po::positional_options_description pd;
     pd.add("rtc_file", 1);
 
+    po::options_description hidden;
+    hidden.add_options()("rtc_file", po::value<std::string>(), "rendering task configuration file");
+
     po::options_description desc( //
         "Usage: ./raytrace [OPTION...] RTC_FILE\n"
         "Render scene specified in RTC_FILE using ray tracing.\n"
         "Options");
     desc.add_options()                                           //
-        ("rtc_file", "rendering task configuration file")        //
         ("help,h", po::bool_switch(), "print this help message") //
         ("preview,p", po::bool_switch(),
          "preview scene\n"
@@ -28,17 +30,20 @@ int main(int argc, const char *argv[]) {
          " e: \troll right\n"
          " q: \troll left\n"
          " backspace: \treset view\n"
-         " left shift: \tspeed up\n"
-         " left ctrl: \tslow down\n"
+         " left shift: \taccelerate\n"
+         " left ctrl: \tdecelerate\n"
          " enter: \toverwrite rtc file camera settings with current ones\n"
          " space: \trender current view\n"
          " esc: \tquit\n");
 
+    po::options_description cmdline_opts;
+    cmdline_opts.add(desc).add(hidden);
+
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(pd).run(), vm);
+    po::store(po::command_line_parser(argc, argv).options(cmdline_opts).positional(pd).run(), vm);
     po::notify(vm);
 
-    if (!vm.count("rtc_file") || vm.count("help")) {
+    if (!vm.count("rtc_file") || vm.at("help").as<bool>()) {
         std::cout << desc;
         return 0;
     }
