@@ -300,11 +300,11 @@ void RenderingTask::RTWindow::MainLoop(RenderingTask *rt) {
             camera.rot = glm::quatLookAtLH(glm::normalize(rt->lookAt - rt->viewPoint), rt->up);
         }
         if (glfwGetKey(win(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            spdMult = 10.f;
-        else if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-            spdMult = .1f;
-        else
-            spdMult = 1.f;
+            if (std::numeric_limits<float>::max() / 2.f >= spdMult)
+                spdMult *= 2.f;
+        if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+            if (std::numeric_limits<float>::epsilon() * 2.f <= spdMult)
+                spdMult /= 2.f;
         glfwGetCursorPos(win(), &refMouseX, &refMouseY);
         // <<< process events
         WaitForFixedFPS();
