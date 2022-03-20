@@ -24,6 +24,7 @@ int main(int argc, const char *argv[]) {
         ("preview,p", po::bool_switch(),
          "preview scene\n"
          "Controls:\n"
+         " LMB+move: \tlook around\n"
          " w: \tmove forward\n"
          " s: \tmove backward\n"
          " a: \tmove left\n"
