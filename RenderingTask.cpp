@@ -184,7 +184,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
     for (auto &light : lights) {
         Ray shadowRay = {hit, glm::normalize(light.pos - hit)};
         float sqDist = glm::distance2(hit, light.pos);
-        if (isObstructed(shadowRay))
+        if (isObstructed(shadowRay, light))
             continue;
         float dTerm = glm::dot(n, shadowRay.d);
         color +=
@@ -223,7 +223,7 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
     return true;
 }
 
-bool RenderingTask::isObstructed(const Ray &r) const {
+bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
     for (const auto &mesh : meshes)
         for (const auto &tri : mesh.triangles) {
             Vertex a = mesh.vertices[tri.indices[0]];
@@ -232,7 +232,7 @@ bool RenderingTask::isObstructed(const Ray &r) const {
             glm::vec2 baryPos;
             float t;
             if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-                if (t > .001f)
+                if (t > .001f && glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos))
                     return true;
         }
     return false;
