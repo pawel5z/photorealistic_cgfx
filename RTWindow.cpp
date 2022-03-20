@@ -39,6 +39,7 @@ void RenderingTask::RTWindow::MainLoop() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     double refMouseX = 0, refMouseY = 0;
+    int lShift = GLFW_RELEASE, lCtrl = GLFW_RELEASE, enter = GLFW_RELEASE;
     while (glfwGetKey(win(), GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(win()) == 0) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         AGLErrors("before drawing");
@@ -84,22 +85,34 @@ void RenderingTask::RTWindow::MainLoop() {
             camera.pos = rt->viewPoint;
             camera.rot = glm::quatLookAtLH(glm::normalize(rt->lookAt - rt->viewPoint), rt->up);
         }
-        if (glfwGetKey(win(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            if (std::numeric_limits<float>::max() / 2.f >= spdMult)
-                spdMult *= 2.f;
-        if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-            if (std::numeric_limits<float>::epsilon() * 2.f <= spdMult)
-                spdMult /= 2.f;
-        if (glfwGetKey(win(), GLFW_KEY_SPACE)) {
+        if (glfwGetKey(win(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+            if (lShift == GLFW_RELEASE)
+                if (std::numeric_limits<float>::max() / 2.f >= spdMult)
+                    spdMult *= 2.f;
+            lShift = GLFW_PRESS;
+        } else
+            lShift = GLFW_RELEASE;
+        if (glfwGetKey(win(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+            if (lCtrl == GLFW_RELEASE)
+                if (std::numeric_limits<float>::epsilon() * 2.f <= spdMult)
+                    spdMult /= 2.f;
+            lCtrl = GLFW_PRESS;
+        } else
+            lCtrl = GLFW_RELEASE;
+        if (glfwGetKey(win(), GLFW_KEY_SPACE) == GLFW_PRESS) {
             updateRTCamera(camera);
             rt->renderPreview = true;
             break;
         }
-        if (glfwGetKey(win(), GLFW_KEY_ENTER)) {
-            updateRTCamera(camera);
-            rt->updateRTCFile();
-            std::cout << "Saved changes to \"" << rt->rtcPath << "\".\n";
-        }
+        if (glfwGetKey(win(), GLFW_KEY_ENTER) == GLFW_PRESS) {
+            if (enter == GLFW_RELEASE) {
+                updateRTCamera(camera);
+                rt->updateRTCFile();
+                std::cout << "Saved changes to \"" << rt->rtcPath << "\".\n";
+            }
+            enter = GLFW_PRESS;
+        } else
+            enter = GLFW_RELEASE;
         glfwGetCursorPos(win(), &refMouseX, &refMouseY);
         // <<< process events
         WaitForFixedFPS();
