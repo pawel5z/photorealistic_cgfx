@@ -41,7 +41,16 @@ public:
     void updateRTCFile();
 
 private:
-    class RTWindow;
+    class RTWindow : public AGLWindow {
+    public:
+        RTWindow(RenderingTask *rt);
+        void MainLoop();
+        void KeyCB(int key, int scancode, int action, int mods) override;
+
+    private:
+        RenderingTask *rt;
+        void updateRTCamera(const Camera &camera);
+    };
     friend RTWindow;
 
     std::vector<Light> lights;
@@ -56,18 +65,6 @@ private:
     void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count,
                      unsigned int &progress) const;
     void recomputeCameraParams();
-};
-
-class RenderingTask::RTWindow : public AGLWindow {
-public:
-    RTWindow(RenderingTask *rt);
-
-    void MainLoop();
-    void KeyCB(int key, int scancode, int action, int mods) override;
-
-private:
-    RenderingTask *rt;
-    void updateRTCamera(const Camera &camera);
 };
 
 #endif // RENDERING_TASK_HPP
