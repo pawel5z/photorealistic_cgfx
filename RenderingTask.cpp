@@ -178,7 +178,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
         return {0, 0, 0};
     if (maxDepth == 0 || lights.size() == 0)
         return mat->kd;
-    glm::vec3 color = mat->ka;
+    glm::vec3 color = mat->ka * .1f;
     glm::vec3 hit = r.o + t * r.d;
     glm::vec3 viewer = -r.d;
     for (auto &light : lights) {
@@ -193,7 +193,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
                             ? glm::max(0.f, glm::pow(glm::dot(viewer, glm::reflect(shadowRay.d, n)),
                                                      mat->ns))
                             : 0.f)) *
-            light.color * light.intensity / (4.f * glm::pi<float>() * sqDist);
+            light.color * light.intensity / sqDist;
     }
     color += mat->ks * traceRay({r.o + t * r.d, glm::reflect(viewer, n)}, maxDepth - 1);
     return color;
