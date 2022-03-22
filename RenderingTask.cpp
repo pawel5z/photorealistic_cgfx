@@ -241,11 +241,10 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
                                 const unsigned int count, unsigned int &progress) const {
     for (unsigned int p = from; p < from + count; p++) {
-        glm::vec3 col = glm::clamp(
+        glm::vec3 col =
             glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f,
                        1.f) *
-                255.f,
-            0.f, 255.f);
+            255.f;
         for (glm::length_t i = 0; i < col.length(); i++)
             imgData[3 * p + i] = col[i];
         progress++;
