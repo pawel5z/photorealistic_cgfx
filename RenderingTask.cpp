@@ -153,12 +153,12 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
        << rt->viewPoint.x << ' ' << rt->viewPoint.y << ' ' << rt->viewPoint.z << '\n'
        << rt->lookAt.x << ' ' << rt->lookAt.y << ' ' << rt->lookAt.z << '\n'
        << rt->up.x << ' ' << rt->up.y << ' ' << rt->up.z << '\n'
-       << rt->yView << '\n';
+       << rt->yView;
     for (const auto &light : rt->lights) {
         std::vector<unsigned char> byteCol = light.getByteColor();
-        os << "L " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
+        os << "\nL " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
            << (int)byteCol[0] << ' ' << (int)byteCol[1] << ' ' << (int)byteCol[2] << ' '
-           << light.intensity << '\n';
+           << light.intensity;
     }
     return os;
 }
