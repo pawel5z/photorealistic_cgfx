@@ -195,7 +195,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
                             : 0.f)) *
             light.color * light.intensity / sqDist;
     }
-    color += mat->ks * traceRay({r.o + t * r.d, glm::reflect(viewer, n)}, maxDepth - 1);
+    color += mat->ks * traceRay({hit, glm::reflect(r.d, n)}, maxDepth - 1);
     return color;
 }
 
