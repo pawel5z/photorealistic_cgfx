@@ -164,10 +164,8 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
 }
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
-    Ray r = {viewPoint};
-    r.d = glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) +
-                         right * ((float)px * 2.f / (float)(width - 1) - 1.f));
-    return r;
+    return {viewPoint, glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) +
+                                      right * ((float)px * 2.f / (float)(width - 1) - 1.f))};
 }
 
 glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
@@ -180,7 +178,6 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
         return mat->kd;
     glm::vec3 color = mat->ka * .1f;
     glm::vec3 hit = r.o + t * r.d;
-    glm::vec3 viewer = -r.d;
     for (auto &light : lights) {
         Ray shadowRay = {hit, glm::normalize(light.pos - hit)};
         float sqDist = glm::distance2(hit, light.pos);
@@ -190,7 +187,7 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
         color +=
             (mat->kd * glm::max(0.f, dTerm) +
              mat->ks * (dTerm > 0.f
-                            ? glm::max(0.f, glm::pow(glm::dot(viewer, glm::reflect(shadowRay.d, n)),
+                            ? glm::max(0.f, glm::pow(glm::dot(-r.d, glm::reflect(shadowRay.d, n)),
                                                      mat->ns))
                             : 0.f)) *
             light.color * light.intensity / sqDist;
