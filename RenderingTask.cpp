@@ -113,6 +113,8 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
             vertices.push_back({{v.x, v.y, v.z}, glm::normalize(glm::vec3(n.x, n.y, n.z))});
         }
     }
+
+    std::cerr << triangles.size() << " triangles\n";
 }
 
 void RenderingTask::render() const {
