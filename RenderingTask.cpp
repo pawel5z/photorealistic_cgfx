@@ -93,8 +93,26 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     for (int i = 0; i < scene->mNumMaterials; i++)
         mats.emplace_back(scene->mMaterials[i]);
 
-    for (int i = 0; i < scene->mNumMeshes; i++)
-        meshes.emplace_back(scene->mMeshes[i], mats);
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        aiMesh *mesh = scene->mMeshes[i];
+
+        meshes.emplace_back(triangles.size(), mesh->mNumFaces, mesh->mMaterialIndex);
+
+        for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+            aiFace f = mesh->mFaces[i];
+            Triangle t;
+            for (unsigned int j = 0; j < f.mNumIndices; j++)
+                t.indices[j] = f.mIndices[j] + vertices.size();
+            triangles.push_back(t);
+            trianglesToMatIndices.push_back(mesh->mMaterialIndex);
+        }
+
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            aiVector3D v = mesh->mVertices[i];
+            aiVector3D n = mesh->mNormals[i];
+            vertices.push_back({{v.x, v.y, v.z}, glm::normalize(glm::vec3(n.x, n.y, n.z))});
+        }
+    }
 }
 
 void RenderingTask::render() const {
@@ -198,19 +216,19 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
                                             const Material **mat) const {
     float tNearest = std::numeric_limits<float>::max();
     glm::vec2 baryPos;
-    for (const auto &mesh : meshes)
-        for (const auto &tri : mesh.triangles) {
-            Vertex a = mesh.vertices[tri.indices[0]];
-            Vertex b = mesh.vertices[tri.indices[1]];
-            Vertex c = mesh.vertices[tri.indices[2]];
-            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-                continue;
-            if (.001f < t && t < tNearest) {
-                tNearest = t;
-                n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
-                *mat = mesh.mat;
-            }
+    for (unsigned int i = 0; i < triangles.size(); i++) {
+        const auto &tri = triangles[i];
+        Vertex a = vertices[tri.indices[0]];
+        Vertex b = vertices[tri.indices[1]];
+        Vertex c = vertices[tri.indices[2]];
+        if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+            continue;
+        if (.001f < t && t < tNearest) {
+            tNearest = t;
+            n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
+            *mat = &mats[trianglesToMatIndices[i]];
         }
+    }
     if (tNearest == std::numeric_limits<float>::max())
         return false;
     t = tNearest;
@@ -219,17 +237,16 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
 }
 
 bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    for (const auto &mesh : meshes)
-        for (const auto &tri : mesh.triangles) {
-            Vertex a = mesh.vertices[tri.indices[0]];
-            Vertex b = mesh.vertices[tri.indices[1]];
-            Vertex c = mesh.vertices[tri.indices[2]];
-            glm::vec2 baryPos;
-            float t;
-            if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-                if (t > .001f && glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos))
-                    return true;
-        }
+    for (const auto &tri : triangles) {
+        Vertex a = vertices[tri.indices[0]];
+        Vertex b = vertices[tri.indices[1]];
+        Vertex c = vertices[tri.indices[2]];
+        glm::vec2 baryPos;
+        float t;
+        if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+            if (t > .001f && glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos))
+                return true;
+    }
     return false;
 }
 

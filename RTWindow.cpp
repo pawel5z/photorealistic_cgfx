@@ -17,21 +17,26 @@ void RenderingTask::RTWindow::MainLoop() {
 
     GLuint meshPId = 0;
     compileProgramFromFile(meshPId, "mesh.vert", "mesh.frag");
+
     GLuint arrays[rt->meshes.size()];
     glGenVertexArrays(rt->meshes.size(), arrays);
-    GLuint buffers[rt->meshes.size()];
-    glGenBuffers(rt->meshes.size(), buffers);
+
+    GLuint buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, rt->vertices.size() * sizeof(Vertex), rt->vertices.data(),
+                 GL_STATIC_DRAW);
+
     GLuint elementBuffers[rt->meshes.size()];
     glGenBuffers(rt->meshes.size(), elementBuffers);
+
     for (unsigned int i = 0; i < rt->meshes.size(); i++) {
         auto &mesh = rt->meshes[i];
         glBindVertexArray(arrays[i]);
-        glBindBuffer(GL_ARRAY_BUFFER, buffers[i]);
-        glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Vertex), mesh.vertices.data(),
-                     GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffers[i]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.triangles.size() * sizeof(Triangle),
-                     mesh.triangles.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.trianglesCnt * sizeof(Triangle),
+                     &rt->triangles[mesh.firstTriangleIdx], GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, false, 2 * sizeof(glm::vec3), nullptr);
     }
@@ -48,10 +53,9 @@ void RenderingTask::RTWindow::MainLoop() {
         glUseProgram(meshPId);
         glUniformMatrix4fv(0, 1, false, &camera.getPVMat()[0][0]);
         for (unsigned int i = 0; i < rt->meshes.size(); i++) {
-            glUniform3fv(1, 1, &rt->meshes[i].mat->kd[0]);
+            glUniform3fv(1, 1, &rt->mats[rt->meshes[i].matIdx].kd[0]);
             glBindVertexArray(arrays[i]);
-            glDrawElements(GL_TRIANGLES, rt->meshes[i].triangles.size() * 3, GL_UNSIGNED_INT,
-                           nullptr);
+            glDrawElements(GL_TRIANGLES, rt->meshes[i].trianglesCnt * 3, GL_UNSIGNED_INT, nullptr);
         }
         // <<< render
         AGLErrors("after drawing");
@@ -118,7 +122,7 @@ void RenderingTask::RTWindow::MainLoop() {
         WaitForFixedFPS();
     }
     glDeleteProgram(meshPId);
-    glDeleteBuffers(rt->meshes.size(), buffers);
+    glDeleteBuffers(rt->meshes.size(), &buffer);
     glDeleteBuffers(rt->meshes.size(), elementBuffers);
     glDeleteVertexArrays(rt->meshes.size(), arrays);
 }

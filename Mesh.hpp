@@ -1,9 +1,9 @@
 #ifndef MESH_HPP
 #define MESH_HPP
 
-#include <vector>
-#include <glm/glm.hpp>
 #include <assimp/mesh.h>
+#include <glm/glm.hpp>
+#include <vector>
 
 #include "Material.hpp"
 
@@ -18,11 +18,12 @@ struct Triangle {
 
 class Mesh {
 public:
-    std::vector<Vertex> vertices;
-    std::vector<Triangle> triangles;
-    const Material *mat;
+    const unsigned int firstTriangleIdx;
+    const unsigned int trianglesCnt;
+    const unsigned int matIdx;
 
-    Mesh(aiMesh *mesh, const std::vector<Material> &mats);
+    Mesh(const unsigned int firstTriangleIdx, const unsigned int trianglesCnt,
+         const unsigned int matIdx);
 };
 
 #endif // MESH_HPP

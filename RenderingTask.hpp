@@ -56,6 +56,12 @@ private:
     std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
+    std::vector<Vertex> vertices;
+    /* trianglesToMatIndices[i] corresponds to triangles[i] */
+    std::vector<Triangle> triangles;
+    /* This cannot be kept in Triangle struct, because Triangle structs are passed to element
+     * buffer in OpenGL. */
+    std::vector<unsigned int> trianglesToMatIndices;
     unsigned int concThreads;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;
