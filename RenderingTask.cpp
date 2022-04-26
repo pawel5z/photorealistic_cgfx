@@ -115,6 +115,9 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     }
 
     std::cerr << triangles.size() << " triangles\n";
+
+    // TODO perhaps max leaf capacity needs tweaking
+    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
 }
 
 void RenderingTask::render() const {
@@ -216,40 +219,15 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
 
 bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n,
                                             const Material **mat) const {
-    float tNearest = std::numeric_limits<float>::max();
-    glm::vec2 baryPos;
-    for (unsigned int i = 0; i < triangles.size(); i++) {
-        const auto &tri = triangles[i];
-        Vertex a = vertices[tri.indices[0]];
-        Vertex b = vertices[tri.indices[1]];
-        Vertex c = vertices[tri.indices[2]];
-        if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-            continue;
-        if (.001f < t && t < tNearest) {
-            tNearest = t;
-            n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
-            *mat = &mats[trianglesToMatIndices[i]];
-        }
-    }
-    if (tNearest == std::numeric_limits<float>::max())
-        return false;
-    t = tNearest;
-    n = glm::normalize(n);
-    return true;
+    unsigned int trianIdx;
+    bool ret = kdTree->findNearestIntersection(Ray(r), triangles, vertices, t, n, trianIdx);
+    if (ret)
+        *mat = &mats[trianglesToMatIndices[trianIdx]];
+    return ret;
 }
 
 bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    for (const auto &tri : triangles) {
-        Vertex a = vertices[tri.indices[0]];
-        Vertex b = vertices[tri.indices[1]];
-        Vertex c = vertices[tri.indices[2]];
-        glm::vec2 baryPos;
-        float t;
-        if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-            if (t > .001f && glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos))
-                return true;
-    }
-    return false;
+    return kdTree->isObstructed(Ray(r), l, triangles, vertices);
 }
 
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,

@@ -2,10 +2,12 @@
 #define RENDERING_TASK_HPP
 
 #include <glm/glm.hpp>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "KDTree.hpp"
 #include "Light.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
@@ -58,6 +60,7 @@ private:
      * This cannot be kept in Triangle struct, because Triangle structs are passed to element
      * buffer in OpenGL. */
     std::vector<unsigned int> trianglesToMatIndices;
+    std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;
