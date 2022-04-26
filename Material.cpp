@@ -3,9 +3,8 @@
 
 #include "Material.hpp"
 
-Material::Material(float ns, float ni, char illum, glm::vec3 ka, glm::vec3 kd,
-                   glm::vec3 ks, glm::vec3 ke) : ns(ns), ni(ni), illum(illum), ka(ka), kd(kd),
-                                                 ks(ks), ke(ke) {}
+Material::Material(float ns, float ni, glm::vec3 ka, glm::vec3 kd, glm::vec3 ks, glm::vec3 ke)
+    : ns(ns), ni(ni), ka(ka), kd(kd), ks(ks), ke(ke) {}
 
 Material::Material(aiMaterial *mat) {
     aiString aiName;
@@ -15,8 +14,6 @@ Material::Material(aiMaterial *mat) {
         throw std::logic_error("Could not get specular exponent.");
     if (AI_SUCCESS != mat->Get(AI_MATKEY_REFRACTI, ni))
         throw std::logic_error("Could not get index of refraction.");
-    if (AI_SUCCESS != mat->Get(AI_MATKEY_SHADING_MODEL, illum))
-        std::cerr << "Could not get illumination model, but we can go without it.\n";
 
     aiColor3D col;
     if (AI_SUCCESS != mat->Get(AI_MATKEY_COLOR_AMBIENT, col))

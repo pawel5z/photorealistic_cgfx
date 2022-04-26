@@ -7,15 +7,14 @@
 class Material {
 public:
     std::string name;
-    float ns; // specular exponent
-    float ni; // index of refraction
-    unsigned char illum; // illumination model
+    float ns;     // specular exponent
+    float ni;     // index of refraction
     glm::vec3 ka; // ambient color
     glm::vec3 kd; // diffuse color
     glm::vec3 ks; // specular color
     glm::vec3 ke; // emissive color
 
-    Material(float ns, float ni, char illum, glm::vec3 ka, glm::vec3 kd, glm::vec3 ks, glm::vec3 ke);
+    Material(float ns, float ni, glm::vec3 ka, glm::vec3 kd, glm::vec3 ks, glm::vec3 ke);
     Material(aiMaterial *mat);
 };
 
