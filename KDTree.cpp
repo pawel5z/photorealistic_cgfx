@@ -42,7 +42,7 @@ unsigned int KDTreeNode::getTrianglesCnt() const { return trianglesCnt >> 2; }
 
 unsigned int KDTreeNode::getSplitAxis() const { return flags & 0b11u; }
 
-bool KDTreeNode::isLeaf() const { return flags & 0b11u == 0b11u; }
+bool KDTreeNode::isLeaf() const { return (flags & 0b11u) == 0b11u; }
 
 unsigned int KDTreeNode::getAboveChild() const { return aboveChild >> 2; }
 
@@ -119,6 +119,8 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
 
     node.initInterior(axis, split);
     nodes.push_back(node);
+    if (parentNodeIdx != ~0u && aboveSplit)
+        nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
     unsigned int nodeIdx = nodes.size() - 1;
     buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false,
               (axis + 1) % 3);
@@ -136,6 +138,23 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     if (node.isLeaf()) {
         float tNearest = std::numeric_limits<float>::max();
         glm::vec2 baryPos;
+
+        if (node.getTrianglesCnt() == 1) {
+            const Triangle &tri = triangles.at(node.oneTriangle);
+            Vertex a = vertices.at(tri.indices[0]);
+            Vertex b = vertices.at(tri.indices[1]);
+            Vertex c = vertices.at(tri.indices[2]);
+            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+                return false;
+            if (r.tMin + .001f < t && t < r.tMax) {
+                n = glm::normalize(a.norm + baryPos.x * (b.norm - a.norm) +
+                                   baryPos.y * (c.norm - a.norm));
+                trianIdx = node.oneTriangle;
+                return true;
+            }
+            return false;
+        }
+
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
             const Triangle &tri =
                 triangles.at(leavesElementsIndices.at(node.triangleIndicesOffset + i));
@@ -193,6 +212,18 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
     if (node.isLeaf()) {
         float t;
         glm::vec2 baryPos;
+
+        if (node.getTrianglesCnt() == 1) {
+            const Triangle &tri = triangles.at(node.oneTriangle);
+            Vertex a = vertices.at(tri.indices[0]);
+            Vertex b = vertices.at(tri.indices[1]);
+            Vertex c = vertices.at(tri.indices[2]);
+            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+                return false;
+            return (r.tMin + .001f < t &&
+                    glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos));
+        }
+
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
             const Triangle &tri =
                 triangles.at(leavesElementsIndices.at(node.triangleIndicesOffset + i));
@@ -206,6 +237,7 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
                 return true;
             }
         }
+        return false;
     }
 
     // interior node
