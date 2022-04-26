@@ -1,6 +1,8 @@
 #include "KDTree.hpp"
 
 #include <cmath>
+#include <glm/gtx/intersect.hpp>
+#include <glm/gtx/norm.hpp>
 #include <random>
 #include <stdexcept>
 
@@ -60,6 +62,17 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     buildTree(triangles, vertices, trianglesIndices, maxDepth, ~0u, false, 0);
 }
 
+bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
+                                     const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
+                                     unsigned int &trianIdx) const {
+    return findNearestIntersection(r, triangles, vertices, 0, t, n, trianIdx);
+}
+
+bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+                          const std::vector<Vertex> &vertices) const {
+    return isObstructed(r, l, triangles, vertices, 0);
+}
+
 void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                        const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                        unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis) {
@@ -109,4 +122,110 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false,
               (axis + 1) % 3);
     buildTree(triangles, vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, (axis + 1) % 3);
+}
+
+bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
+                                     const std::vector<Vertex> &vertices, unsigned int nodeIdx,
+                                     float &t, glm::vec3 &n, unsigned int &trianIdx) const {
+    if (r.tMax < r.tMin)
+        return false;
+
+    const KDTreeNode &node = nodes[nodeIdx];
+
+    if (node.isLeaf()) {
+        float tNearest = std::numeric_limits<float>::max();
+        glm::vec2 baryPos;
+        for (int i = 0; i < node.getTrianglesCnt(); i++) {
+            const Triangle &tri = triangles[node.triangleIndicesOffset + i];
+            Vertex a = vertices[tri.indices[0]];
+            Vertex b = vertices[tri.indices[1]];
+            Vertex c = vertices[tri.indices[2]];
+            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+                continue;
+            if (r.tMin + .001f < t && t < r.tMax && t < tNearest) {
+                tNearest = t;
+                n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
+                trianIdx = node.triangleIndicesOffset + i;
+            }
+        }
+        if (tNearest == std::numeric_limits<float>::max())
+            return false;
+        t = tNearest;
+        n = glm::normalize(n);
+        return true;
+    }
+
+    // interior node
+    unsigned int splitAxis = node.getSplitAxis(), firstChildIdx, secondChildIdx;
+    bool below = r.o[splitAxis] < node.getSplitPos() ||
+                 r.o[splitAxis] == node.getSplitPos() && r.d[splitAxis] <= 0;
+    if (below) {
+        firstChildIdx = nodeIdx + 1;
+        secondChildIdx = node.getAboveChild();
+    } else {
+        firstChildIdx = node.getAboveChild();
+        secondChildIdx = nodeIdx + 1;
+    }
+    float tPlane = (node.getSplitPos() - r.o[splitAxis]) / r.d[splitAxis];
+    if (tPlane > r.tMax || tPlane <= 0)
+        return findNearestIntersection(r, triangles, vertices, firstChildIdx, t, n, trianIdx);
+    else if (tPlane < r.tMin)
+        return findNearestIntersection(r, triangles, vertices, secondChildIdx, t, n, trianIdx);
+    else {
+        if (findNearestIntersection(Ray(r.o, r.d, r.tMin, tPlane), triangles, vertices,
+                                    firstChildIdx, t, n, trianIdx))
+            return true;
+        else
+            return findNearestIntersection(Ray(r.o, r.d, tPlane, r.tMax), triangles, vertices,
+                                           secondChildIdx, t, n, trianIdx);
+    }
+}
+
+bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+                          const std::vector<Vertex> &vertices, unsigned int nodeIdx) const {
+    if (r.tMax < r.tMin)
+        return false;
+
+    const KDTreeNode &node = nodes[nodeIdx];
+
+    if (node.isLeaf()) {
+        float t;
+        glm::vec2 baryPos;
+        for (int i = 0; i < node.getTrianglesCnt(); i++) {
+            const Triangle &tri = triangles[node.triangleIndicesOffset + i];
+            Vertex a = vertices[tri.indices[0]];
+            Vertex b = vertices[tri.indices[1]];
+            Vertex c = vertices[tri.indices[2]];
+            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
+                continue;
+            if (r.tMin + .001f < t &&
+                glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos)) {
+                return true;
+            }
+        }
+    }
+
+    // interior node
+    unsigned int splitAxis = node.getSplitAxis(), firstChildIdx, secondChildIdx;
+    bool below = r.o[splitAxis] < node.getSplitPos() ||
+                 r.o[splitAxis] == node.getSplitPos() && r.d[splitAxis] <= 0;
+    if (below) {
+        firstChildIdx = nodeIdx + 1;
+        secondChildIdx = node.getAboveChild();
+    } else {
+        firstChildIdx = node.getAboveChild();
+        secondChildIdx = nodeIdx + 1;
+    }
+    float tPlane = (node.getSplitPos() - r.o[splitAxis]) / r.d[splitAxis];
+    if (tPlane > r.tMax || tPlane <= 0)
+        return isObstructed(r, l, triangles, vertices, firstChildIdx);
+    else if (tPlane < r.tMin)
+        return isObstructed(r, l, triangles, vertices, secondChildIdx);
+    else {
+        if (isObstructed(Ray(r.o, r.d, r.tMin, tPlane), l, triangles, vertices, firstChildIdx))
+            return true;
+        else
+            return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), l, triangles, vertices,
+                                secondChildIdx);
+    }
 }

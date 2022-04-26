@@ -9,13 +9,9 @@
 #include "Light.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
+#include "Ray.hpp"
 #include "ogl_interface/AGL3Window.hpp"
 #include "ogl_interface/Camera.hpp"
-
-struct Ray {
-    glm::vec3 o; // origin
-    glm::vec3 d; // direction
-};
 
 class RenderingTask {
 public:
@@ -57,9 +53,9 @@ private:
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
     std::vector<Vertex> vertices;
-    /* trianglesToMatIndices[i] corresponds to triangles[i] */
     std::vector<Triangle> triangles;
-    /* This cannot be kept in Triangle struct, because Triangle structs are passed to element
+    /* trianglesToMatIndices[i] corresponds to triangles[i].
+     * This cannot be kept in Triangle struct, because Triangle structs are passed to element
      * buffer in OpenGL. */
     std::vector<unsigned int> trianglesToMatIndices;
     unsigned int concThreads;

@@ -3,7 +3,9 @@
 
 #include <vector>
 
+#include "Light.hpp"
 #include "Mesh.hpp"
+#include "Ray.hpp"
 
 struct KDTreeNode {
     union {
@@ -40,6 +42,11 @@ class KDTree {
 public:
     KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
            unsigned int maxLeafCapacity);
+    bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
+                                 const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
+                                 unsigned int &trianIdx) const;
+    bool isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+                      const std::vector<Vertex> &vertices) const;
 
 private:
     std::vector<unsigned int> leavesElementsIndices;
@@ -53,6 +60,11 @@ private:
     void buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                    const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                    unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis);
+    bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
+                                 const std::vector<Vertex> &vertices, unsigned int nodeIdx,
+                                 float &t, glm::vec3 &n, unsigned int &trianIdx) const;
+    bool isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+                      const std::vector<Vertex> &vertices, unsigned int nodeIdx) const;
 };
 
 #endif // !KDTREE_HPP
