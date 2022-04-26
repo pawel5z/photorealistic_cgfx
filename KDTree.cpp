@@ -19,7 +19,7 @@ void KDTreeNode::initLeaf(const std::vector<unsigned int> &trianglesIndices,
         oneTriangle = 0;
         break;
     case 1:
-        oneTriangle = trianglesIndices[0];
+        oneTriangle = trianglesIndices.at(0);
         break;
     default:
         triangleIndicesOffset = leavesElementsIndices.size();
@@ -83,7 +83,7 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
         node.initLeaf(trianglesIndices, leavesElementsIndices);
         nodes.push_back(node);
         if (parentNodeIdx != ~0u && aboveSplit)
-            nodes[parentNodeIdx].setAboveChild(nodes.size() - 1);
+            nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
         return;
     }
 
@@ -94,14 +94,15 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     std::uniform_int_distribution<unsigned int> indDistrib(0, trianglesIndices.size() - 1);
     std::uniform_int_distribution<unsigned int> vertDistrib(0, 2);
     float split =
-        vertices[triangles[trianglesIndices[indDistrib(gen)]].indices[vertDistrib(gen)]].pos[axis];
+        vertices.at(triangles.at(trianglesIndices.at(indDistrib(gen))).indices[vertDistrib(gen)])
+            .pos[axis];
 
     std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
     for (auto i : trianglesIndices) {
-        Triangle t = triangles[i];
+        Triangle t = triangles.at(i);
         bool pushedBelow = false, pushedAbove = false;
         for (int j = 0; j < 3; j++) {
-            const Vertex &v = vertices[t.indices[j]];
+            const Vertex &v = vertices.at(t.indices[j]);
             if (v.pos[axis] <= split) {
                 if (!pushedBelow) {
                     trianglesIndicesBelow.push_back(i);
@@ -130,22 +131,23 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     if (r.tMax < r.tMin)
         return false;
 
-    const KDTreeNode &node = nodes[nodeIdx];
+    const KDTreeNode &node = nodes.at(nodeIdx);
 
     if (node.isLeaf()) {
         float tNearest = std::numeric_limits<float>::max();
         glm::vec2 baryPos;
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
-            const Triangle &tri = triangles[node.triangleIndicesOffset + i];
-            Vertex a = vertices[tri.indices[0]];
-            Vertex b = vertices[tri.indices[1]];
-            Vertex c = vertices[tri.indices[2]];
+            const Triangle &tri =
+                triangles.at(leavesElementsIndices.at(node.triangleIndicesOffset + i));
+            Vertex a = vertices.at(tri.indices[0]);
+            Vertex b = vertices.at(tri.indices[1]);
+            Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
             if (r.tMin + .001f < t && t < r.tMax && t < tNearest) {
                 tNearest = t;
                 n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
-                trianIdx = node.triangleIndicesOffset + i;
+                trianIdx = leavesElementsIndices.at(node.triangleIndicesOffset + i);
             }
         }
         if (tNearest == std::numeric_limits<float>::max())
@@ -186,16 +188,17 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
     if (r.tMax < r.tMin)
         return false;
 
-    const KDTreeNode &node = nodes[nodeIdx];
+    const KDTreeNode &node = nodes.at(nodeIdx);
 
     if (node.isLeaf()) {
         float t;
         glm::vec2 baryPos;
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
-            const Triangle &tri = triangles[node.triangleIndicesOffset + i];
-            Vertex a = vertices[tri.indices[0]];
-            Vertex b = vertices[tri.indices[1]];
-            Vertex c = vertices[tri.indices[2]];
+            const Triangle &tri =
+                triangles.at(leavesElementsIndices.at(node.triangleIndicesOffset + i));
+            Vertex a = vertices.at(tri.indices[0]);
+            Vertex b = vertices.at(tri.indices[1]);
+            Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
             if (r.tMin + .001f < t &&
