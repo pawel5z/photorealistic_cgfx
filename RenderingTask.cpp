@@ -21,6 +21,8 @@ namespace fs = std::filesystem;
 RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rtcPath(rtcPath) {
     this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
 
+    std::cerr << "Reading data...\n";
+
     std::ifstream configFile(rtcPath);
     fs::path rtcDir = fs::path(rtcPath).parent_path();
     std::string line;

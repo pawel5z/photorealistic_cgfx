@@ -3,6 +3,7 @@
 #include <cmath>
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/norm.hpp>
+#include <iostream>
 #include <random>
 #include <stdexcept>
 
@@ -57,6 +58,7 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     : maxLeafCapacity(maxLeafCapacity),
       maxDepth(std::round(8 + 1.3f * std::log2(triangles.size()))) {
 
+    std::cerr << "Building acceleration structure...\n";
     std::vector<unsigned int> trianglesIndices(triangles.size());
     std::iota(trianglesIndices.begin(), trianglesIndices.end(), 0);
     buildTree(triangles, vertices, trianglesIndices, maxDepth, ~0u, false, 0);
