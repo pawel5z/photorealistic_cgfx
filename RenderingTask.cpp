@@ -2,6 +2,7 @@
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -124,12 +125,13 @@ void RenderingTask::render() const {
     std::vector<unsigned int> progress(concThreads);
     std::vector<std::thread> ts;
     unsigned int minBatchSize = width * height / concThreads;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     for (unsigned int i = 0; i < concThreads; i++) {
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
                         std::ref(progress[i]));
     }
-    std::cout << "Rendering using " << concThreads << " threads.\n";
+    std::cout << "Rendering using " << concThreads << " threads...\n";
     while (true) {
         unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
         std::cerr
@@ -142,6 +144,13 @@ void RenderingTask::render() const {
     std::cout << "\n";
     for (auto &t : ts)
         t.join();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    unsigned int tracedRaysCnt = (recLvl * (1 + lights.size()) + 1) * width * height;
+    float tracingTime =
+        std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
+    std::cout << "Traced " << tracedRaysCnt << " rays in " << tracingTime << " seconds.\n"
+              << tracedRaysCnt / tracingTime << " rays per second\n";
 
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
