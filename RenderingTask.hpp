@@ -37,6 +37,7 @@ public:
     void preview();
     friend std::ostream &operator<<(std::ostream &os, const RenderingTask *rt);
     void updateRTCFile();
+    void buildAccStructures();
 
 private:
     class RTWindow : public AGLWindow {

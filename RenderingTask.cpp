@@ -117,9 +117,6 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     }
 
     std::cerr << triangles.size() << " triangles\n";
-
-    // TODO perhaps max leaf capacity needs tweaking
-    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
 }
 
 void RenderingTask::render() const {
@@ -164,11 +161,6 @@ void RenderingTask::preview() {
     window.MainLoop();
 }
 
-void RenderingTask::updateRTCFile() {
-    std::ofstream fout(rtcPath);
-    fout << this;
-}
-
 std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
     os << "#\n"
        << rt->origObjPath << '\n'
@@ -186,6 +178,16 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
            << light.intensity;
     }
     return os;
+}
+
+void RenderingTask::updateRTCFile() {
+    std::ofstream fout(rtcPath);
+    fout << this;
+}
+
+void RenderingTask::buildAccStructures() {
+    // TODO perhaps max leaf capacity needs tweaking
+    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
 }
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
