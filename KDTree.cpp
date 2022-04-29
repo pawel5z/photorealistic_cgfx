@@ -76,7 +76,7 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
 }
 
 void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-                       const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+                       std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                        unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis) {
     KDTreeNode node;
 
@@ -90,14 +90,13 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     }
 
     // create interior node
-    // TODO implement better method for selecting split plane
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<unsigned int> indDistrib(0, trianglesIndices.size() - 1);
-    std::uniform_int_distribution<unsigned int> vertDistrib(0, 2);
-    float split =
-        vertices.at(triangles.at(trianglesIndices.at(indDistrib(gen))).indices[vertDistrib(gen)])
-            .pos[axis];
+    auto m = trianglesIndices.begin() + trianglesIndices.size() / 2;
+    std::nth_element<>(trianglesIndices.begin(), m, trianglesIndices.end(),
+                       [&](const unsigned int &i, const unsigned int &j) {
+                           return triangles.at(i).getCenter(vertices)[axis] <
+                                  triangles.at(j).getCenter(vertices)[axis];
+                       });
+    float split = triangles.at(*m).getCenter(vertices)[axis];
 
     std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
     for (auto i : trianglesIndices) {

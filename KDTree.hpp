@@ -58,7 +58,7 @@ private:
      * @param axis 0, 1 or 2 (x, y or z respectively).
      */
     void buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-                   const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+                   std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                    unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,
