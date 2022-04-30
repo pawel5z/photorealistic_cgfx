@@ -195,7 +195,6 @@ void RenderingTask::updateRTCFile() {
 }
 
 void RenderingTask::buildAccStructures() {
-    // TODO perhaps max leaf capacity needs tweaking
     kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
 }
 

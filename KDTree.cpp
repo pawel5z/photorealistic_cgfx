@@ -56,12 +56,22 @@ void KDTreeNode::setAboveChild(unsigned int idx) { aboveChild = idx << 2 | flags
 KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                unsigned int maxLeafCapacity)
     : maxLeafCapacity(maxLeafCapacity),
-      maxDepth(std::round(8 + 1.3f * std::log2(triangles.size()))) {
+      maxDepth(std::round(8 + 1.3f * std::log2(triangles.size()))),
+      spaceBounds(BBox(triangles.at(0), vertices)) {
 
     std::cerr << "Building acceleration structure...\n";
     std::vector<unsigned int> trianglesIndices(triangles.size());
     std::iota(trianglesIndices.begin(), trianglesIndices.end(), 0);
-    buildTree(triangles, vertices, trianglesIndices, maxDepth, ~0u, false, 0);
+
+    std::vector<BBox> trianglesBounds(triangles.size());
+    trianglesBounds.at(0) = spaceBounds;
+    for (unsigned int i = 1; i < triangles.size(); i++) {
+        trianglesBounds.at(i) = BBox(triangles.at(i), vertices);
+        spaceBounds += trianglesBounds.at(i);
+    }
+
+    buildTree(triangles, vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds,
+              trianglesBounds);
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -77,7 +87,8 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
 
 void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                        std::vector<unsigned int> &trianglesIndices, unsigned int depth,
-                       unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis) {
+                       unsigned int parentNodeIdx, bool aboveSplit, BBox nodeBounds,
+                       const std::vector<BBox> &trianglesBounds) {
     KDTreeNode node;
 
     if (trianglesIndices.size() <= maxLeafCapacity || depth == 0) {
@@ -90,13 +101,10 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     }
 
     // create interior node
-    auto m = trianglesIndices.begin() + trianglesIndices.size() / 2;
-    std::nth_element<>(trianglesIndices.begin(), m, trianglesIndices.end(),
-                       [&](const unsigned int &i, const unsigned int &j) {
-                           return triangles.at(i).getCenter(vertices)[axis] <
-                                  triangles.at(j).getCenter(vertices)[axis];
-                       });
-    float split = triangles.at(*m).getCenter(vertices)[axis];
+    unsigned int axis = std::max({0, 1, 2}, [&](unsigned int d1, unsigned int d2) {
+        return nodeBounds.dimLength(d1) < nodeBounds.dimLength(d2);
+    });
+    float split = (nodeBounds.getDimBounds(axis)[0] + nodeBounds.getDimBounds(axis)[1]) / 2.f;
 
     std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
     for (auto i : trianglesIndices) {
@@ -123,9 +131,15 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     if (parentNodeIdx != ~0u && aboveSplit)
         nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
     unsigned int nodeIdx = nodes.size() - 1;
-    buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false,
-              (axis + 1) % 3);
-    buildTree(triangles, vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, (axis + 1) % 3);
+
+    BBox belowBounds = nodeBounds;
+    belowBounds.replaceUpper(axis, split);
+    buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
+              trianglesBounds);
+    BBox aboveBounds = nodeBounds;
+    aboveBounds.replaceLower(axis, split);
+    buildTree(triangles, vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
+              trianglesBounds);
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,

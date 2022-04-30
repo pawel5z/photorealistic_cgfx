@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "BBox.hpp"
 #include "Light.hpp"
 #include "Mesh.hpp"
 #include "Ray.hpp"
@@ -53,13 +54,15 @@ private:
     const unsigned int maxLeafCapacity;
     const unsigned int maxDepth;
     std::vector<KDTreeNode> nodes;
+    BBox spaceBounds;
 
     /**
      * @param axis 0, 1 or 2 (x, y or z respectively).
      */
     void buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                    std::vector<unsigned int> &trianglesIndices, unsigned int depth,
-                   unsigned int parentNodeIdx, bool aboveSplit, unsigned int axis);
+                   unsigned int parentNodeIdx, bool aboveSplit, BBox nodeBounds,
+                   const std::vector<BBox> &trianglesBounds);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,
                                  float &t, glm::vec3 &n, unsigned int &trianIdx) const;
