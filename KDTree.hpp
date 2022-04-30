@@ -11,7 +11,6 @@
 struct KDTreeNode {
     union {
         float split;                        // interior
-        unsigned int oneTriangle;           // leaf
         unsigned int triangleIndicesOffset; // leaf
     };
     union {
