@@ -97,23 +97,11 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
     float split = (nodeBounds.getDimBounds(axis)[0] + nodeBounds.getDimBounds(axis)[1]) / 2.f;
 
     std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
-    for (auto i : trianglesIndices) {
-        Triangle t = triangles.at(i);
-        bool pushedBelow = false, pushedAbove = false;
-        for (int j = 0; j < 3; j++) {
-            const Vertex &v = vertices.at(t.indices[j]);
-            if (v.pos[axis] <= split) {
-                if (!pushedBelow) {
-                    trianglesIndicesBelow.push_back(i);
-                    pushedBelow = true;
-                }
-            } else {
-                if (!pushedAbove) {
-                    trianglesIndicesAbove.push_back(i);
-                    pushedAbove = true;
-                }
-            }
-        }
+    for (const unsigned int i : trianglesIndices) {
+        if (trianglesBounds[i].axesBounds[axis][0] <= split)
+            trianglesIndicesBelow.push_back(i);
+        if (trianglesBounds[i].axesBounds[axis][1] >= split)
+            trianglesIndicesAbove.push_back(i);
     }
 
     node.initInterior(axis, split);
@@ -122,11 +110,10 @@ void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector
         nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
     unsigned int nodeIdx = nodes.size() - 1;
 
-    BBox belowBounds = nodeBounds;
+    BBox belowBounds = nodeBounds, aboveBounds = nodeBounds;
     belowBounds.replaceUpper(axis, split);
     buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
               trianglesBounds);
-    BBox aboveBounds = nodeBounds;
     aboveBounds.replaceLower(axis, split);
     buildTree(triangles, vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
               trianglesBounds);
