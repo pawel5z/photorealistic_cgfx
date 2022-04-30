@@ -1,6 +1,7 @@
 #ifndef BBOX_HPP
 #define BBOX_HPP
 
+#include <array>
 #include <glm/glm.hpp>
 
 #include "Mesh.hpp"
@@ -10,9 +11,10 @@
  */
 class BBox {
 public:
-    glm::vec2 x, y, z;
+    std::array<glm::vec2, 3> axesBounds;
 
     BBox();
+    BBox(const std::array<glm::vec2, 3> &axesBounds);
     BBox(const glm::vec2 &x, const glm::vec2 &y, const glm::vec2 &z);
     BBox(const Triangle &t, const std::vector<Vertex> &vertices);
     BBox &operator+=(const BBox &rhs);
