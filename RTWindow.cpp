@@ -31,12 +31,12 @@ void RenderingTask::RTWindow::MainLoop() {
     glGenBuffers(rt->meshes.size(), elementBuffers);
 
     for (unsigned int i = 0; i < rt->meshes.size(); i++) {
-        auto &mesh = rt->meshes[i];
+        auto &mesh = rt->meshes.at(i);
         glBindVertexArray(arrays[i]);
         glBindBuffer(GL_ARRAY_BUFFER, buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffers[i]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.trianglesCnt * sizeof(Triangle),
-                     &rt->triangles[mesh.firstTriangleIdx], GL_STATIC_DRAW);
+                     &rt->triangles.at(mesh.firstTriangleIdx), GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, false, 2 * sizeof(glm::vec3), nullptr);
     }
@@ -53,9 +53,10 @@ void RenderingTask::RTWindow::MainLoop() {
         glUseProgram(meshPId);
         glUniformMatrix4fv(0, 1, false, &camera.getPVMat()[0][0]);
         for (unsigned int i = 0; i < rt->meshes.size(); i++) {
-            glUniform3fv(1, 1, &rt->mats[rt->meshes[i].matIdx].kd[0]);
+            glUniform3fv(1, 1, &rt->mats.at(rt->meshes.at(i).matIdx).kd[0]);
             glBindVertexArray(arrays[i]);
-            glDrawElements(GL_TRIANGLES, rt->meshes[i].trianglesCnt * 3, GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, rt->meshes.at(i).trianglesCnt * 3, GL_UNSIGNED_INT,
+                           nullptr);
         }
         // <<< render
         AGLErrors("after drawing");

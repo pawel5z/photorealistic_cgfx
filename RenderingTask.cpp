@@ -129,7 +129,7 @@ void RenderingTask::render() const {
     for (unsigned int i = 0; i < concThreads; i++) {
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
-                        std::ref(progress[i]));
+                        std::ref(progress.at(i)));
     }
     std::cout << "Rendering using " << concThreads << " threads...\n";
     while (true) {
@@ -183,7 +183,7 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
     for (const auto &light : rt->lights) {
         std::vector<unsigned char> byteCol = light.getByteColor();
         os << "\nL " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
-           << (int)byteCol[0] << ' ' << (int)byteCol[1] << ' ' << (int)byteCol[2] << ' '
+           << (int)byteCol.at(0) << ' ' << (int)byteCol.at(1) << ' ' << (int)byteCol.at(2) << ' '
            << light.intensity;
     }
     return os;
@@ -234,7 +234,7 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
     unsigned int trianIdx;
     bool ret = kdTree->findNearestIntersection(Ray(r), triangles, vertices, t, n, trianIdx);
     if (ret)
-        *mat = &mats[trianglesToMatIndices[trianIdx]];
+        *mat = &mats.at(trianglesToMatIndices.at(trianIdx));
     return ret;
 }
 
@@ -250,7 +250,7 @@ void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsig
                        1.f) *
             255.f;
         for (glm::length_t i = 0; i < col.length(); i++)
-            imgData[3 * p + i] = col[i];
+            imgData.at(3 * p + i) = col[i];
         progress++;
     }
 }
