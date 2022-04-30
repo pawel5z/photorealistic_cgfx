@@ -41,6 +41,9 @@ void RenderingTask::RTWindow::MainLoop() {
     double refMouseX = 0, refMouseY = 0;
     int lShift = GLFW_RELEASE, lCtrl = GLFW_RELEASE, enter = GLFW_RELEASE;
     while (glfwGetKey(win(), GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(win()) == 0) {
+        std::cerr
+            << "\rCamera position: " << camera.pos.x << ' ' << camera.pos.y << ' ' << camera.pos.z
+            << "                                                                                ";
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         AGLErrors("before drawing");
         // >>> render
@@ -117,6 +120,7 @@ void RenderingTask::RTWindow::MainLoop() {
         // <<< process events
         WaitForFixedFPS();
     }
+    std::cerr << "\n";
     glDeleteProgram(meshPId);
     glDeleteBuffers(rt->meshes.size(), buffers);
     glDeleteBuffers(rt->meshes.size(), elementBuffers);
