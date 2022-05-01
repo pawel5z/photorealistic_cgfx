@@ -10,8 +10,8 @@
 
 struct KDTreeNode {
     union {
-        float split;                        // interior
-        unsigned int triangleIndicesOffset; // leaf
+        float split;                              // interior
+        unsigned int leavesElementsIndicesOffset; // leaf
     };
     union {
         /* 0b00 -- x, 0b01 -- y, 0b10 -- z, 0b11 -- leaf node */
@@ -60,7 +60,7 @@ private:
      */
     void buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                    std::vector<unsigned int> &trianglesIndices, unsigned int depth,
-                   unsigned int parentNodeIdx, bool aboveSplit, BBox nodeBounds,
+                   unsigned int parentNodeIdx, bool aboveSplit, const BBox &nodeBounds,
                    const std::vector<BBox> &trianglesBounds);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,

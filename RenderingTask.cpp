@@ -195,6 +195,7 @@ void RenderingTask::updateRTCFile() {
 }
 
 void RenderingTask::buildAccStructures() {
+    std::cerr << "Building acceleration structure...\n";
     kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
 }
 
