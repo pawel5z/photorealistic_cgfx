@@ -196,7 +196,9 @@ void RenderingTask::updateRTCFile() {
 
 void RenderingTask::buildAccStructures() {
     std::cerr << "Building acceleration structure...\n";
-    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices, 16));
+    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices,
+                                                std::round(8 + 1.3f * std::log2(triangles.size())),
+                                                16, 0.f, 1.f, 80.f));
 }
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "BBox.hpp"
+#include "BoundEdge.hpp"
 #include "Light.hpp"
 #include "Mesh.hpp"
 #include "Ray.hpp"
@@ -41,7 +42,8 @@ struct KDTreeNode {
 class KDTree {
 public:
     KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-           unsigned int maxLeafCapacity);
+           unsigned int maxDepth, unsigned int maxLeafCapacity, float emptyBonus,
+           float traversalCost, float isectCost);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
                                  unsigned int &trianIdx) const;
@@ -54,19 +56,25 @@ private:
     const unsigned int maxDepth;
     std::vector<KDTreeNode> nodes;
     BBox spaceBounds;
+    const float emptyBonus;
+    const float traversalCost;
+    const float isectCost;
 
     /**
      * @param axis 0, 1 or 2 (x, y or z respectively).
      */
-    void buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-                   std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+    void buildTree(const std::vector<Vertex> &vertices,
+                   const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                    unsigned int parentNodeIdx, bool aboveSplit, const BBox &nodeBounds,
-                   const std::vector<BBox> &trianglesBounds);
+                   const std::vector<BBox> &trianglesBounds,
+                   std::array<std::vector<BoundEdge>, 3> &edges, unsigned int badRefines);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,
                                  float &t, glm::vec3 &n, unsigned int &trianIdx) const;
     bool isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
                       const std::vector<Vertex> &vertices, unsigned int nodeIdx) const;
+    void createLeafNode(const std::vector<unsigned int> &trianglesIndices,
+                        unsigned int parentNodeIdx, bool aboveSplit);
 };
 
 #endif // !KDTREE_HPP

@@ -44,10 +44,11 @@ void KDTreeNode::setAboveChild(unsigned int idx) { aboveChild = idx << 2 | flags
 ////////////////////////////////////////////////////////////////////////////////
 
 KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-               unsigned int maxLeafCapacity)
-    : maxLeafCapacity(maxLeafCapacity),
-      maxDepth(std::round(8 + 1.3f * std::log2(triangles.size()))),
-      spaceBounds(BBox(triangles.at(0), vertices)) {
+               unsigned int maxDepth, unsigned int maxLeafCapacity, float emptyBonus,
+               float traversalCost, float isectCost)
+    : maxLeafCapacity(maxLeafCapacity), maxDepth(maxDepth),
+      spaceBounds(BBox(triangles.at(0), vertices)), emptyBonus(emptyBonus),
+      traversalCost(traversalCost), isectCost(isectCost) {
 
     std::vector<unsigned int> trianglesIndices(triangles.size());
     std::iota(trianglesIndices.begin(), trianglesIndices.end(), 0);
@@ -59,8 +60,11 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
         spaceBounds += trianglesBounds.at(i);
     }
 
-    buildTree(triangles, vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds,
-              trianglesBounds);
+    std::array<std::vector<BoundEdge>, 3> edges({std::vector<BoundEdge>(2 * triangles.size()),
+                                                 std::vector<BoundEdge>(2 * triangles.size()),
+                                                 std::vector<BoundEdge>(2 * triangles.size())});
+    buildTree(vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges,
+              0);
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -74,48 +78,114 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
     return isObstructed(r, l, triangles, vertices, 0);
 }
 
-void KDTree::buildTree(const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-                       std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+void KDTree::buildTree(const std::vector<Vertex> &vertices,
+                       const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
                        unsigned int parentNodeIdx, bool aboveSplit, const BBox &nodeBounds,
-                       const std::vector<BBox> &trianglesBounds) {
-    KDTreeNode node;
-
+                       const std::vector<BBox> &trianglesBounds,
+                       std::array<std::vector<BoundEdge>, 3> &edges, unsigned int badRefines) {
     if (trianglesIndices.size() <= maxLeafCapacity || depth == 0) {
-        // create leaf node
-        node.initLeaf(trianglesIndices, leavesElementsIndices);
-        nodes.push_back(node);
-        if (parentNodeIdx != ~0u && aboveSplit)
-            nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
+        createLeafNode(trianglesIndices, parentNodeIdx, aboveSplit);
         return;
     }
 
-    // create interior node
-    unsigned int axis = std::max({0, 1, 2}, [&](unsigned int d1, unsigned int d2) {
+    // Try to find the best split.
+    unsigned int firstCandidateAxis = std::max({0, 1, 2}, [&](unsigned int d1, unsigned int d2) {
         return nodeBounds.dimLength(d1) < nodeBounds.dimLength(d2);
     });
-    float split = (nodeBounds.getDimBounds(axis)[0] + nodeBounds.getDimBounds(axis)[1]) / 2.f;
+    unsigned int bestAxis = -1, bestOffset = -1;
+    float bestCost = std::numeric_limits<float>::max(),
+          oldCost = isectCost * trianglesIndices.size(), totalSA = nodeBounds.surfaceArea(),
+          invTotalSA = 1.f / totalSA;
 
-    std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
-    for (const unsigned int i : trianglesIndices) {
-        if (trianglesBounds[i].axesBounds[axis][0] <= split)
-            trianglesIndicesBelow.push_back(i);
-        if (trianglesBounds[i].axesBounds[axis][1] >= split)
-            trianglesIndicesAbove.push_back(i);
+    for (unsigned int i = 0; i < 3; i++) {
+        unsigned int axis = (firstCandidateAxis + i) % 3;
+
+        // Initialize edges for axis.
+        for (unsigned int j = 0; j < trianglesIndices.size(); j++) {
+            unsigned int trianIdx = trianglesIndices.at(j);
+            edges.at(axis).at(2 * j) =
+                BoundEdge(trianglesBounds.at(trianIdx).axesBounds.at(axis)[0], trianIdx, true);
+            edges.at(axis).at(2 * j + 1) =
+                BoundEdge(trianglesBounds.at(trianIdx).axesBounds.at(axis)[1], trianIdx, false);
+        }
+        std::sort(edges.at(axis).begin(), edges.at(axis).begin() + trianglesIndices.size() * 2,
+                  [](const BoundEdge &e1, const BoundEdge &e2) {
+                      if (e1.t == e2.t)
+                          return e1.type < e2.type;
+                      return e1.t < e2.t;
+                  });
+
+        // Find the best split for axis.
+        unsigned int nBelow = 0, nAbove = trianglesIndices.size();
+        for (int j = 0; j < 2 * trianglesIndices.size(); j++) {
+            if (edges.at(axis).at(j).type == EdgeType::End)
+                nAbove--;
+            float edgeT = edges.at(axis).at(j).t;
+            if (edgeT > nodeBounds.axesBounds.at(axis)[0] &&
+                edgeT < nodeBounds.axesBounds.at(axis)[1]) {
+                // Compute cost for split at j-th edge.
+                unsigned int otherAxis0 = (axis + 1) % 3, otherAxis1 = (axis + 2) % 3;
+                float belowSA =
+                    2 * (nodeBounds.dimLength(otherAxis0) * nodeBounds.dimLength(otherAxis1) +
+                         (edgeT - nodeBounds.axesBounds.at(axis)[0]) *
+                             (nodeBounds.dimLength(otherAxis0) + nodeBounds.dimLength(otherAxis1)));
+                float aboveSA =
+                    2 * (nodeBounds.dimLength(otherAxis0) * nodeBounds.dimLength(otherAxis1) +
+                         (nodeBounds.axesBounds.at(axis)[1] - edgeT) *
+                             (nodeBounds.dimLength(otherAxis0) + nodeBounds.dimLength(otherAxis1)));
+                float pBelow = belowSA * invTotalSA;
+                float pAbove = aboveSA * invTotalSA;
+                float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0;
+                float cost =
+                    traversalCost + isectCost * (1 - eb) * (pBelow * nBelow + pAbove * nAbove);
+                if (cost < bestCost) {
+                    bestCost = cost;
+                    bestAxis = axis;
+                    bestOffset = j;
+                }
+            }
+            if (edges.at(axis).at(j).type == EdgeType::Start)
+                nBelow++;
+        }
+
+        if (bestAxis == -1 && i < 2)
+            continue;
+
+        if (bestCost > oldCost)
+            badRefines++;
+
+        if ((bestCost > 4 * oldCost && trianglesIndices.size() < 16) || bestAxis == -1 ||
+            badRefines == 3) {
+            createLeafNode(trianglesIndices, parentNodeIdx, aboveSplit);
+            return;
+        } else
+            break;
     }
 
-    node.initInterior(axis, split);
+    // Classify triangles with respect to split.
+    std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
+    for (unsigned int i = 0; i < bestOffset; i++)
+        if (edges.at(bestAxis).at(i).type == EdgeType::Start)
+            trianglesIndicesBelow.push_back(edges.at(bestAxis).at(i).trianIdx);
+    for (unsigned int i = bestOffset + 1; i < 2 * trianglesIndices.size(); i++)
+        if (edges.at(bestAxis).at(i).type == EdgeType::End)
+            trianglesIndicesAbove.push_back(edges.at(bestAxis).at(i).trianIdx);
+
+    KDTreeNode node;
+    float split = edges.at(bestAxis).at(bestOffset).t;
+    node.initInterior(bestAxis, split);
     nodes.push_back(node);
     if (parentNodeIdx != ~0u && aboveSplit)
         nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
     unsigned int nodeIdx = nodes.size() - 1;
 
     BBox belowBounds = nodeBounds, aboveBounds = nodeBounds;
-    belowBounds.replaceUpper(axis, split);
-    buildTree(triangles, vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
-              trianglesBounds);
-    aboveBounds.replaceLower(axis, split);
-    buildTree(triangles, vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
-              trianglesBounds);
+    belowBounds.replaceUpper(bestAxis, split);
+    buildTree(vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
+              trianglesBounds, edges, badRefines);
+    aboveBounds.replaceLower(bestAxis, split);
+    buildTree(vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
+              trianglesBounds, edges, badRefines);
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -227,4 +297,13 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
             return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), l, triangles, vertices,
                                 secondChildIdx);
     }
+}
+
+void KDTree::createLeafNode(const std::vector<unsigned int> &trianglesIndices,
+                            unsigned int parentNodeIdx, bool aboveSplit) {
+    KDTreeNode node;
+    node.initLeaf(trianglesIndices, leavesElementsIndices);
+    nodes.push_back(node);
+    if (parentNodeIdx != ~0u && aboveSplit)
+        nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
 }

@@ -20,9 +20,10 @@ public:
     BBox &operator+=(const BBox &rhs);
     friend BBox operator+(BBox lhs, const BBox &rhs);
     float dimLength(unsigned int dim) const;
-    glm::vec2 getDimBounds(unsigned int dim) const;
+    glm::vec2 dimBounds(unsigned int dim) const;
     void replaceLower(unsigned int dim, float v);
     void replaceUpper(unsigned int dim, float v);
+    float surfaceArea() const;
 };
 
 #endif // !BBOX_HPP

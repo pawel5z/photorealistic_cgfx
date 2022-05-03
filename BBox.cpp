@@ -41,8 +41,13 @@ float BBox::dimLength(unsigned int dim) const {
     return axesBounds.at(dim)[1] - axesBounds.at(dim)[0];
 }
 
-glm::vec2 BBox::getDimBounds(unsigned int dim) const { return axesBounds.at(dim); }
+glm::vec2 BBox::dimBounds(unsigned int dim) const { return axesBounds.at(dim); }
 
 void BBox::replaceLower(unsigned int dim, float v) { axesBounds.at(dim)[0] = v; }
 
 void BBox::replaceUpper(unsigned int dim, float v) { axesBounds.at(dim)[1] = v; }
+
+float BBox::surfaceArea() const {
+    return 2.f * (dimLength(0) * dimLength(1) + dimLength(0) * dimLength(2) +
+                  dimLength(1) * dimLength(2));
+}
