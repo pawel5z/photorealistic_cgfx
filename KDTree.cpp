@@ -1,3 +1,8 @@
+/*
+ * Implementation based on
+ * https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Kd-Tree_Accelerator.
+ */
+
 #include "KDTree.hpp"
 
 #include <cmath>
