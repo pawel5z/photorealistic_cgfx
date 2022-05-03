@@ -99,8 +99,7 @@ void KDTree::buildTree(const std::vector<Vertex> &vertices,
     });
     unsigned int bestAxis = -1, bestOffset = -1;
     float bestCost = std::numeric_limits<float>::max(),
-          oldCost = isectCost * trianglesIndices.size(), totalSA = nodeBounds.surfaceArea(),
-          invTotalSA = 1.f / totalSA;
+          oldCost = isectCost * trianglesIndices.size(), totalSA = nodeBounds.surfaceArea();
 
     for (unsigned int i = 0; i < 3; i++) {
         unsigned int axis = (firstCandidateAxis + i) % 3;
@@ -138,8 +137,8 @@ void KDTree::buildTree(const std::vector<Vertex> &vertices,
                     2 * (nodeBounds.dimLength(otherAxis0) * nodeBounds.dimLength(otherAxis1) +
                          (nodeBounds.axesBounds.at(axis)[1] - edgeT) *
                              (nodeBounds.dimLength(otherAxis0) + nodeBounds.dimLength(otherAxis1)));
-                float pBelow = belowSA * invTotalSA;
-                float pAbove = aboveSA * invTotalSA;
+                float pBelow = belowSA / totalSA;
+                float pAbove = aboveSA / totalSA;
                 float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0;
                 float cost =
                     traversalCost + isectCost * (1 - eb) * (pBelow * nBelow + pAbove * nAbove);
