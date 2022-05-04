@@ -97,15 +97,17 @@ void KDTree::buildTree(const std::vector<Vertex> &vertices,
     }
 
     // Try to find the best split.
-    unsigned int firstCandidateAxis = std::max({0, 1, 2}, [&](unsigned int d1, unsigned int d2) {
-        return nodeBounds.dimLength(d1) < nodeBounds.dimLength(d2);
-    });
+    std::array<unsigned int, 3> candidateAxes = {0, 1, 2};
+    std::sort(candidateAxes.begin(), candidateAxes.end(),
+              [&](const unsigned int &a1, const unsigned int &a2) {
+                  return nodeBounds.dimLength(a1) > nodeBounds.dimLength(a2);
+              });
     unsigned int bestAxis = -1, bestOffset = -1;
     float bestCost = std::numeric_limits<float>::max(),
           oldCost = isectCost * trianglesIndices.size(), totalSA = nodeBounds.surfaceArea();
 
     for (unsigned int i = 0; i < 3; i++) {
-        unsigned int axis = (firstCandidateAxis + i) % 3;
+        unsigned int axis = candidateAxes.at(i);
 
         // Initialize edges for axis.
         for (unsigned int j = 0; j < trianglesIndices.size(); j++) {
