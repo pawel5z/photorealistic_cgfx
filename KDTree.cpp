@@ -71,7 +71,10 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     buildTree(vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges,
               0);
 
-    rayRangeBias = .01f;
+    rayRangeBias = .0001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
+                                      spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
+                                      spaceBounds.dimLength(2) * spaceBounds.dimLength(2));
+    std::cerr << "ray range bias: " << rayRangeBias << '\n';
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -217,10 +220,11 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
             Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + rayRangeBias < t && t < r.tMax + rayRangeBias && t < tNearest) {
+            if (r.tMin + rayRangeBias < t && t < r.tMax) {
                 tNearest = t;
                 n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
                 trianIdx = leavesElementsIndices.at(node.leavesElementsIndicesOffset + i);
+                r.tMax = tNearest;
             }
         }
         if (tNearest == std::numeric_limits<float>::max())
