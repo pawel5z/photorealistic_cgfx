@@ -71,9 +71,9 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     buildTree(vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges,
               0);
 
-    rayRangeBias = .0001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
-                                      spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
-                                      spaceBounds.dimLength(2) * spaceBounds.dimLength(2));
+    rayRangeBias = .000001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
+                                        spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
+                                        spaceBounds.dimLength(2) * spaceBounds.dimLength(2));
     std::cerr << "ray range bias: " << rayRangeBias << '\n';
 }
 
