@@ -70,6 +70,8 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
                                                  std::vector<BoundEdge>(2 * triangles.size())});
     buildTree(vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges,
               0);
+
+    rayRangeBias = .01f;
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -78,9 +80,10 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     return findNearestIntersection(r, triangles, vertices, 0, t, n, trianIdx);
 }
 
-bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
+                          const std::vector<Triangle> &triangles,
                           const std::vector<Vertex> &vertices) const {
-    return isObstructed(r, l, triangles, vertices, 0);
+    return isObstructed(r, l, tLight, triangles, vertices, 0);
 }
 
 void KDTree::buildTree(const std::vector<Vertex> &vertices,
@@ -212,7 +215,7 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
             Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + .001f < t && t < r.tMax && t < tNearest) {
+            if (r.tMin + rayRangeBias < t && t < r.tMax + rayRangeBias && t < tNearest) {
                 tNearest = t;
                 n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
                 trianIdx = leavesElementsIndices.at(node.leavesElementsIndicesOffset + i);
@@ -251,7 +254,8 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     }
 }
 
-bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &triangles,
+bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
+                          const std::vector<Triangle> &triangles,
                           const std::vector<Vertex> &vertices, unsigned int nodeIdx) const {
     if (r.tMax < r.tMin)
         return false;
@@ -270,8 +274,7 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
             Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + .001f < t &&
-                glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos)) {
+            if (r.tMin + rayRangeBias < t && t < tLight) {
                 return true;
             }
         }
@@ -291,14 +294,15 @@ bool KDTree::isObstructed(Ray r, const Light &l, const std::vector<Triangle> &tr
     }
     float tPlane = (node.getSplitPos() - r.o[splitAxis]) / r.d[splitAxis];
     if (tPlane > r.tMax || tPlane <= 0)
-        return isObstructed(r, l, triangles, vertices, firstChildIdx);
+        return isObstructed(r, l, tLight, triangles, vertices, firstChildIdx);
     else if (tPlane < r.tMin)
-        return isObstructed(r, l, triangles, vertices, secondChildIdx);
+        return isObstructed(r, l, tLight, triangles, vertices, secondChildIdx);
     else {
-        if (isObstructed(Ray(r.o, r.d, r.tMin, tPlane), l, triangles, vertices, firstChildIdx))
+        if (isObstructed(Ray(r.o, r.d, r.tMin, tPlane), l, tLight, triangles, vertices,
+                         firstChildIdx))
             return true;
         else
-            return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), l, triangles, vertices,
+            return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), l, tLight, triangles, vertices,
                                 secondChildIdx);
     }
 }

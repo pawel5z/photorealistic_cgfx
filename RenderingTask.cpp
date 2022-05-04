@@ -87,7 +87,8 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals |
-                                                          aiProcess_FixInfacingNormals);
+                                                          aiProcess_FixInfacingNormals |
+                                                          aiProcess_JoinIdenticalVertices);
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << '\n';
         throw std::logic_error("Error while importing \"" + objPath + "\".\n");
@@ -242,7 +243,9 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
 }
 
 bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    return kdTree->isObstructed(Ray(r), l, triangles, vertices);
+    glm::vec3 tLightVec = (l.pos - r.o) / r.d;
+    float tLight = std::max({tLightVec.x, tLightVec.y, tLightVec.z});
+    return kdTree->isObstructed(Ray(r), l, tLight, triangles, vertices);
 }
 
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
