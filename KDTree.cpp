@@ -68,8 +68,9 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     std::array<std::vector<BoundEdge>, 3> edges({std::vector<BoundEdge>(2 * triangles.size()),
                                                  std::vector<BoundEdge>(2 * triangles.size()),
                                                  std::vector<BoundEdge>(2 * triangles.size())});
-    buildTree(vertices, trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges,
-              0);
+    buildTreeSAH(trianglesIndices, maxDepth, ~0u, false, spaceBounds, trianglesBounds, edges, 0);
+    // buildTreeHalfSplits(trianglesIndices, maxDepth, ~0u, false, spaceBounds,
+    //                     trianglesBounds);
 
     rayRangeBias = .000001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
                                         spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
@@ -89,11 +90,10 @@ bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
     return isObstructed(r, l, tLight, triangles, vertices, 0);
 }
 
-void KDTree::buildTree(const std::vector<Vertex> &vertices,
-                       const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
-                       unsigned int parentNodeIdx, bool aboveSplit, const BBox &nodeBounds,
-                       const std::vector<BBox> &trianglesBounds,
-                       std::array<std::vector<BoundEdge>, 3> &edges, unsigned int badRefines) {
+void KDTree::buildTreeSAH(const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+                          unsigned int parentNodeIdx, bool aboveSplit, const BBox &nodeBounds,
+                          const std::vector<BBox> &trianglesBounds,
+                          std::array<std::vector<BoundEdge>, 3> &edges, unsigned int badRefines) {
     if (trianglesIndices.size() <= maxLeafCapacity || depth == 0) {
         createLeafNode(trianglesIndices, parentNodeIdx, aboveSplit);
         return;
@@ -193,11 +193,50 @@ void KDTree::buildTree(const std::vector<Vertex> &vertices,
 
     BBox belowBounds = nodeBounds, aboveBounds = nodeBounds;
     belowBounds.replaceUpper(bestAxis, split);
-    buildTree(vertices, trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
-              trianglesBounds, edges, badRefines);
+    buildTreeSAH(trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds, trianglesBounds,
+                 edges, badRefines);
     aboveBounds.replaceLower(bestAxis, split);
-    buildTree(vertices, trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
-              trianglesBounds, edges, badRefines);
+    buildTreeSAH(trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds, trianglesBounds,
+                 edges, badRefines);
+}
+
+void KDTree::buildTreeHalfSplits(std::vector<unsigned int> &trianglesIndices, unsigned int depth,
+                                 unsigned int parentNodeIdx, bool aboveSplit,
+                                 const BBox &nodeBounds, const std::vector<BBox> &trianglesBounds) {
+
+    if (trianglesIndices.size() <= maxLeafCapacity || depth == 0) {
+        createLeafNode(trianglesIndices, parentNodeIdx, aboveSplit);
+        return;
+    }
+
+    // create interior node
+    KDTreeNode node;
+    unsigned int axis = std::max({0, 1, 2}, [&](unsigned int d1, unsigned int d2) {
+        return nodeBounds.dimLength(d1) < nodeBounds.dimLength(d2);
+    });
+    float split = (nodeBounds.dimBounds(axis)[0] + nodeBounds.dimBounds(axis)[1]) / 2.f;
+
+    std::vector<unsigned int> trianglesIndicesBelow, trianglesIndicesAbove;
+    for (const unsigned int i : trianglesIndices) {
+        if (trianglesBounds[i].axesBounds[axis][0] <= split)
+            trianglesIndicesBelow.push_back(i);
+        if (trianglesBounds[i].axesBounds[axis][1] >= split)
+            trianglesIndicesAbove.push_back(i);
+    }
+
+    node.initInterior(axis, split);
+    nodes.push_back(node);
+    if (parentNodeIdx != ~0u && aboveSplit)
+        nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
+    unsigned int nodeIdx = nodes.size() - 1;
+
+    BBox belowBounds = nodeBounds, aboveBounds = nodeBounds;
+    belowBounds.replaceUpper(axis, split);
+    buildTreeHalfSplits(trianglesIndicesBelow, depth - 1, nodeIdx, false, belowBounds,
+                        trianglesBounds);
+    aboveBounds.replaceLower(axis, split);
+    buildTreeHalfSplits(trianglesIndicesAbove, depth - 1, nodeIdx, true, aboveBounds,
+                        trianglesBounds);
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -280,9 +319,8 @@ bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
             Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + rayRangeBias < t && t < tLight) {
+            if (r.tMin + rayRangeBias < t && t < tLight)
                 return true;
-            }
         }
         return false;
     }
