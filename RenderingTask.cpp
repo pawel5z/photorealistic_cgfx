@@ -132,7 +132,8 @@ void RenderingTask::render() const {
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
                         std::ref(progress.at(i)));
     }
-    std::cout << "Rendering using " << concThreads << " threads...\n";
+    std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
+              << "...\n";
     while (true) {
         unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
         std::cerr
