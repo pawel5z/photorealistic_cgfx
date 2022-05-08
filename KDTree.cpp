@@ -72,21 +72,23 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
     // buildTreeHalfSplits(trianglesIndices, maxDepth, ~0u, false, spaceBounds,
     //                     trianglesBounds);
 
-    rayRangeBias = .000001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
-                                        spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
-                                        spaceBounds.dimLength(2) * spaceBounds.dimLength(2));
+    rayRangeBias = .00001f * std::sqrt(spaceBounds.dimLength(0) * spaceBounds.dimLength(0) +
+                                       spaceBounds.dimLength(1) * spaceBounds.dimLength(1) +
+                                       spaceBounds.dimLength(2) * spaceBounds.dimLength(2));
     std::cerr << "ray range bias: " << rayRangeBias << '\n';
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                      const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
                                      unsigned int &trianIdx) const {
+    r.o += r.d * rayRangeBias;
     return findNearestIntersection(r, triangles, vertices, 0, t, n, trianIdx);
 }
 
 bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
                           const std::vector<Triangle> &triangles,
                           const std::vector<Vertex> &vertices) const {
+    r.o += r.d * rayRangeBias;
     return isObstructed(r, l, tLight, triangles, vertices, 0);
 }
 
@@ -248,7 +250,7 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     const KDTreeNode &node = nodes.at(nodeIdx);
 
     if (node.isLeaf()) {
-        float tNearest = std::numeric_limits<float>::max();
+        float tNearest = r.tMax + rayRangeBias;
         glm::vec2 baryPos;
 
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
@@ -259,14 +261,13 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
             Vertex c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + rayRangeBias < t && t < r.tMax) {
+            if (r.tMin - rayRangeBias < t && t < tNearest) {
                 tNearest = t;
                 n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
                 trianIdx = leavesElementsIndices.at(node.leavesElementsIndicesOffset + i);
-                r.tMax = tNearest;
             }
         }
-        if (tNearest == std::numeric_limits<float>::max())
+        if (tNearest == r.tMax + rayRangeBias) // value not changed
             return false;
         t = tNearest;
         n = glm::normalize(n);
