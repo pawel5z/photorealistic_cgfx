@@ -203,9 +203,9 @@ void RenderingTask::buildAccStructures() {
                                                 16, 0.f, 1.f, 80.f));
 }
 
-Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
-    return {viewPoint, glm::normalize(front + up * -((float)py * 2.f / (float)(height - 1) - 1.f) +
-                                      right * ((float)px * 2.f / (float)(width - 1) - 1.f))};
+Ray RenderingTask::getPrimaryRay(float px, float py) const {
+    return {viewPoint, glm::normalize(front + up * -(py * 2.f / (float)(height - 1) - 1.f) +
+                                      right * (px * 2.f / (float)(width - 1) - 1.f))};
 }
 
 glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
@@ -253,10 +253,12 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
                                 const unsigned int count, unsigned int &progress) const {
     for (unsigned int p = from; p < from + count; p++) {
-        glm::vec3 col =
-            glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f,
-                       1.f) *
-            255.f;
+        float px = p % width, py = (height - 1 - (p / width));
+        glm::vec3 col(0.f);
+        for (const glm::vec2 off : std::vector<glm::vec2>(4, glm::vec2(.25f)))
+            col += glm::clamp(traceRay(getPrimaryRay(px - off.x, py - off.y), recLvl), 0.f, 1.f) *
+                   255.f;
+        col /= 4.f;
         for (glm::length_t i = 0; i < col.length(); i++)
             imgData.at(3 * p + i) = col[i];
         progress++;

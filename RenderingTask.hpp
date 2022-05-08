@@ -64,7 +64,7 @@ private:
     std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
 
-    Ray getPrimaryRay(unsigned int px, unsigned int py) const;
+    Ray getPrimaryRay(float px, float py) const;
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const Light &l) const;
