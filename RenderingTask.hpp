@@ -2,20 +2,18 @@
 #define RENDERING_TASK_HPP
 
 #include <glm/glm.hpp>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "KDTree.hpp"
 #include "Light.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
+#include "Ray.hpp"
 #include "ogl_interface/AGL3Window.hpp"
 #include "ogl_interface/Camera.hpp"
-
-struct Ray {
-    glm::vec3 o; // origin
-    glm::vec3 d; // direction
-};
 
 class RenderingTask {
 public:
@@ -39,6 +37,7 @@ public:
     void preview();
     friend std::ostream &operator<<(std::ostream &os, const RenderingTask *rt);
     void updateRTCFile();
+    void buildAccStructures();
 
 private:
     class RTWindow : public AGLWindow {
@@ -56,6 +55,13 @@ private:
     std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
+    std::vector<Vertex> vertices;
+    std::vector<Triangle> triangles;
+    /* trianglesToMatIndices[i] corresponds to triangles[i].
+     * This cannot be kept in Triangle struct, because Triangle structs are passed to element
+     * buffer in OpenGL. */
+    std::vector<unsigned int> trianglesToMatIndices;
+    std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;

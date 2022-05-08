@@ -22,6 +22,8 @@ namespace fs = std::filesystem;
 RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rtcPath(rtcPath) {
     this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
 
+    std::cerr << "Reading data...\n";
+
     std::ifstream configFile(rtcPath);
     fs::path rtcDir = fs::path(rtcPath).parent_path();
     std::string line;
@@ -85,7 +87,8 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals |
-                                                          aiProcess_FixInfacingNormals);
+                                                          aiProcess_FixInfacingNormals |
+                                                          aiProcess_JoinIdenticalVertices);
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << '\n';
         throw std::logic_error("Error while importing \"" + objPath + "\".\n");
@@ -94,8 +97,28 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     for (int i = 0; i < scene->mNumMaterials; i++)
         mats.emplace_back(scene->mMaterials[i]);
 
-    for (int i = 0; i < scene->mNumMeshes; i++)
-        meshes.emplace_back(scene->mMeshes[i], mats);
+    for (int i = 0; i < scene->mNumMeshes; i++) {
+        aiMesh *mesh = scene->mMeshes[i];
+
+        meshes.emplace_back(triangles.size(), mesh->mNumFaces, mesh->mMaterialIndex);
+
+        for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+            aiFace f = mesh->mFaces[i];
+            Triangle t;
+            for (unsigned int j = 0; j < f.mNumIndices; j++)
+                t.indices[j] = f.mIndices[j] + vertices.size();
+            triangles.push_back(t);
+            trianglesToMatIndices.push_back(mesh->mMaterialIndex);
+        }
+
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            aiVector3D v = mesh->mVertices[i];
+            aiVector3D n = mesh->mNormals[i];
+            vertices.push_back({{v.x, v.y, v.z}, glm::normalize(glm::vec3(n.x, n.y, n.z))});
+        }
+    }
+
+    std::cerr << triangles.size() << " triangles\n";
 }
 
 void RenderingTask::render() const {
@@ -107,9 +130,10 @@ void RenderingTask::render() const {
     for (unsigned int i = 0; i < concThreads; i++) {
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
-                        std::ref(progress[i]));
+                        std::ref(progress.at(i)));
     }
-    std::cout << "Rendering using " << concThreads << " threads...\n";
+    std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
+              << "...\n";
     while (true) {
         unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
         std::cerr
@@ -148,11 +172,6 @@ void RenderingTask::preview() {
     window.MainLoop();
 }
 
-void RenderingTask::updateRTCFile() {
-    std::ofstream fout(rtcPath);
-    fout << this;
-}
-
 std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
     os << "#\n"
        << rt->origObjPath << '\n'
@@ -166,10 +185,22 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
     for (const auto &light : rt->lights) {
         std::vector<unsigned char> byteCol = light.getByteColor();
         os << "\nL " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
-           << (int)byteCol[0] << ' ' << (int)byteCol[1] << ' ' << (int)byteCol[2] << ' '
+           << (int)byteCol.at(0) << ' ' << (int)byteCol.at(1) << ' ' << (int)byteCol.at(2) << ' '
            << light.intensity;
     }
     return os;
+}
+
+void RenderingTask::updateRTCFile() {
+    std::ofstream fout(rtcPath);
+    fout << this;
+}
+
+void RenderingTask::buildAccStructures() {
+    std::cerr << "Building acceleration structure...\n";
+    kdTree = std::unique_ptr<KDTree>(new KDTree(triangles, vertices,
+                                                std::round(8 + 1.3f * std::log2(triangles.size())),
+                                                16, 0.f, 1.f, 80.f));
 }
 
 Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
@@ -205,41 +236,17 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
 
 bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n,
                                             const Material **mat) const {
-    float tNearest = std::numeric_limits<float>::max();
-    glm::vec2 baryPos;
-    for (const auto &mesh : meshes)
-        for (const auto &tri : mesh.triangles) {
-            Vertex a = mesh.vertices[tri.indices[0]];
-            Vertex b = mesh.vertices[tri.indices[1]];
-            Vertex c = mesh.vertices[tri.indices[2]];
-            if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-                continue;
-            if (.001f < t && t < tNearest) {
-                tNearest = t;
-                n = a.norm + baryPos.x * (b.norm - a.norm) + baryPos.y * (c.norm - a.norm);
-                *mat = mesh.mat;
-            }
-        }
-    if (tNearest == std::numeric_limits<float>::max())
-        return false;
-    t = tNearest;
-    n = glm::normalize(n);
-    return true;
+    unsigned int trianIdx;
+    bool ret = kdTree->findNearestIntersection(Ray(r), triangles, vertices, t, n, trianIdx);
+    if (ret)
+        *mat = &mats.at(trianglesToMatIndices.at(trianIdx));
+    return ret;
 }
 
 bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    for (const auto &mesh : meshes)
-        for (const auto &tri : mesh.triangles) {
-            Vertex a = mesh.vertices[tri.indices[0]];
-            Vertex b = mesh.vertices[tri.indices[1]];
-            Vertex c = mesh.vertices[tri.indices[2]];
-            glm::vec2 baryPos;
-            float t;
-            if (glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
-                if (t > .001f && glm::distance2(r.o, r.o + r.d * t) < glm::distance2(r.o, l.pos))
-                    return true;
-        }
-    return false;
+    glm::vec3 tLightVec = (l.pos - r.o) / r.d;
+    float tLight = std::max({tLightVec.x, tLightVec.y, tLightVec.z});
+    return kdTree->isObstructed(Ray(r), l, tLight, triangles, vertices);
 }
 
 void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
@@ -250,7 +257,7 @@ void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsig
                        1.f) *
             255.f;
         for (glm::length_t i = 0; i < col.length(); i++)
-            imgData[3 * p + i] = col[i];
+            imgData.at(3 * p + i) = col[i];
         progress++;
     }
 }

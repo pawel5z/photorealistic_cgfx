@@ -1,19 +1,11 @@
 #include "Mesh.hpp"
 
-Mesh::Mesh(aiMesh *mesh, const std::vector<Material> &mats) {
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        aiVector3D v = mesh->mVertices[i];
-        aiVector3D n = mesh->mNormals[i];
-        vertices.push_back({{v.x, v.y, v.z}, glm::normalize(glm::vec3(n.x, n.y, n.z))});
-    }
-
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        aiFace f = mesh->mFaces[i];
-        Triangle t;
-        for (unsigned int j = 0; j < f.mNumIndices; j++)
-            t.indices[j] = f.mIndices[j];
-        triangles.push_back(t);
-    }
-
-    mat = &mats[mesh->mMaterialIndex];
+glm::vec3 Triangle::getCenter(const std::vector<Vertex> &vertices) const {
+    return (vertices.at(indices[0]).pos + vertices.at(indices[1]).pos +
+            vertices.at(indices[2]).pos) /
+           3.f;
 }
+
+Mesh::Mesh(const unsigned int firstTriangleIdx, const unsigned int trianglesCnt,
+           const unsigned int matIdx)
+    : firstTriangleIdx(firstTriangleIdx), trianglesCnt(trianglesCnt), matIdx(matIdx) {}

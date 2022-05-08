@@ -55,7 +55,9 @@ int main(int argc, const char *argv[]) {
     RenderingTask rt(vm.at("rtc_file").as<std::string>(), vm.at("threads").as<int>());
     if (vm.at("preview").as<bool>())
         rt.preview();
-    if (rt.renderPreview || !vm.at("preview").as<bool>())
+    if (rt.renderPreview || !vm.at("preview").as<bool>()) {
+        rt.buildAccStructures();
         rt.render();
+    }
     return 0;
 }

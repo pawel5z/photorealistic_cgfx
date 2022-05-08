@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/raytrace",
             "args": [
-                "${workspaceFolder}/examples/holodeck.rtc"
+                "${workspaceFolder}/examples/CornellBox-Original.rtc"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
