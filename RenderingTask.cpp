@@ -230,7 +230,8 @@ glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
                  glm::max(0.f, glm::pow(glm::dot(-r.d, glm::reflect(-shadowRay.d, n)), mat->ns))) *
             light.color * light.intensity / sqDist;
     }
-    color += mat->ks * traceRay({hit, glm::reflect(r.d, n)}, maxDepth - 1);
+    if (mat->ks.r != 0.f || mat->ks.g != 0.f || mat->ks.b != 0.f)
+        color += mat->ks * traceRay({hit, glm::reflect(r.d, n)}, maxDepth - 1);
     return color;
 }
 
