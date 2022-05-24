@@ -1,4 +1,7 @@
-#include <IL/devil_cpp_wrapper.hpp>
+#include <OpenEXR/ImfChannelList.h>
+#include <OpenEXR/ImfFrameBuffer.h>
+#include <OpenEXR/ImfHeader.h>
+#include <OpenEXR/ImfOutputFile.h>
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
@@ -156,21 +159,30 @@ void RenderingTask::render() const {
               << tracedRaysCnt / tracingTime << " rays per second\n";
 
     // saving to file
-    std::vector<unsigned char> imgData(width * height * 3);
+    std::array<std::vector<half>, 3> imgData{std::vector<half>(width * height, 0),
+                                             std::vector<half>(width * height, 0),
+                                             std::vector<half>(width * height, 0)};
     for (unsigned int py = 0; py < height; py++)
         for (unsigned int px = 0; px < width; px++)
             for (unsigned int i = 0; i < 3; i++)
-                imgData.at(py * width * 3 + px * 3 + i) = pixels.at(height - 1 - py).at(px)[i];
-    ilEnable(IL_FILE_OVERWRITE);
-    ilImage img;
-    if (!img.TexImage(width, height, 1, 3, IL_RGB, IL_UNSIGNED_BYTE, imgData.data())) {
-        ilLogErrorStack();
-        throw std::logic_error("Error constructing image.");
-    }
-    if (!img.Save(outputPath.c_str(), IL_PNG)) {
-        ilLogErrorStack();
-        throw std::logic_error("Error saving image.");
-    }
+                imgData.at(i).at(py * width + px) = pixels.at(py).at(px)[i];
+    Imf::Header header(width, height);
+    header.channels().insert("R", Imf::Channel(Imf::HALF));
+    header.channels().insert("G", Imf::Channel(Imf::HALF));
+    header.channels().insert("B", Imf::Channel(Imf::HALF));
+    Imf::OutputFile file(outputPath.c_str(), header);
+    Imf::FrameBuffer frameBuffer;
+    frameBuffer.insert("R", Imf::Slice(Imf::HALF, (char *)imgData.at(0).data(),
+                                       sizeof(imgData.at(0).at(0)),
+                                       sizeof(imgData.at(0).at(0)) * width));
+    frameBuffer.insert("G", Imf::Slice(Imf::HALF, (char *)imgData.at(1).data(),
+                                       sizeof(imgData.at(1).at(0)),
+                                       sizeof(imgData.at(1).at(0)) * width));
+    frameBuffer.insert("B", Imf::Slice(Imf::HALF, (char *)imgData.at(2).data(),
+                                       sizeof(imgData.at(2).at(0)),
+                                       sizeof(imgData.at(2).at(0)) * width));
+    file.setFrameBuffer(frameBuffer);
+    file.writePixels(height);
 }
 
 void RenderingTask::preview() {
@@ -262,8 +274,7 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 unsigned int &progress) const {
     for (unsigned int p = from; p < from + count; p++) {
         unsigned int px = p % width, py = p / width;
-        pixels.at(py).at(px) =
-            glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f) * 255.f;
+        pixels.at(py).at(px) = glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f);
         progress++;
     }
 }

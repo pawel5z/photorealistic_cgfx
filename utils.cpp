@@ -1,17 +1,9 @@
-#include <IL/il.h>
-#include <IL/ilu.h>
 #include <epoxy/gl.h>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
 #include "utils.hpp"
-
-void ilLogErrorStack() {
-    ILenum errCode;
-    while (errCode = ilGetError())
-        std::cerr << iluErrorString(errCode) << '\n';
-}
 
 /**
  * >>>
