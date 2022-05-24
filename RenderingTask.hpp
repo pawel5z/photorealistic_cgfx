@@ -68,8 +68,8 @@ private:
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const Light &l) const;
-    void renderBatch(std::vector<unsigned char> &imgData, unsigned int from, unsigned int count,
-                     unsigned int &progress) const;
+    void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,
+                     const unsigned int count, unsigned int &progress) const;
     void recomputeCameraParams();
 };
 

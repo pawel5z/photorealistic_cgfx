@@ -123,16 +123,15 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
 }
 
 void RenderingTask::render() const {
-    std::vector<unsigned char> imgData(width * height * 3);
+    std::vector<std::vector<glm::vec3>> pixels(height, std::vector<glm::vec3>(width, glm::vec3(0)));
     std::vector<unsigned int> progress(concThreads);
     std::vector<std::thread> ts;
     unsigned int minBatchSize = width * height / concThreads;
     auto begin = std::chrono::steady_clock::now();
-    for (unsigned int i = 0; i < concThreads; i++) {
-        ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
+    for (unsigned int i = 0; i < concThreads; i++)
+        ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(pixels), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
                         std::ref(progress.at(i)));
-    }
     std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
               << "...\n";
     std::this_thread::yield();
@@ -156,6 +155,12 @@ void RenderingTask::render() const {
     std::cout << "Traced " << tracedRaysCnt << " rays in " << tracingTime << " seconds.\n"
               << tracedRaysCnt / tracingTime << " rays per second\n";
 
+    // saving to file
+    std::vector<unsigned char> imgData(width * height * 3);
+    for (unsigned int py = 0; py < height; py++)
+        for (unsigned int px = 0; px < width; px++)
+            for (unsigned int i = 0; i < 3; i++)
+                imgData.at(py * width * 3 + px * 3 + i) = pixels.at(height - 1 - py).at(px)[i];
     ilEnable(IL_FILE_OVERWRITE);
     ilImage img;
     if (!img.TexImage(width, height, 1, 3, IL_RGB, IL_UNSIGNED_BYTE, imgData.data())) {
@@ -252,15 +257,13 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
     return kdTree->isObstructed(Ray(r), l, tLight, triangles, vertices);
 }
 
-void RenderingTask::renderBatch(std::vector<unsigned char> &imgData, const unsigned int from,
-                                const unsigned int count, unsigned int &progress) const {
+void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
+                                const unsigned int from, const unsigned int count,
+                                unsigned int &progress) const {
     for (unsigned int p = from; p < from + count; p++) {
-        glm::vec3 col =
-            glm::clamp(traceRay(getPrimaryRay(p % width, (height - 1 - (p / width))), recLvl), 0.f,
-                       1.f) *
-            255.f;
-        for (glm::length_t i = 0; i < col.length(); i++)
-            imgData.at(3 * p + i) = col[i];
+        unsigned int px = p % width, py = p / width;
+        pixels.at(py).at(px) =
+            glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f) * 255.f;
         progress++;
     }
 }
