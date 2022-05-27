@@ -17,6 +17,7 @@
 #include "ogl_interface/Camera.hpp"
 #include "utils.hpp"
 
+using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
 RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rtcPath(rtcPath) {
@@ -126,7 +127,7 @@ void RenderingTask::render() const {
     std::vector<unsigned int> progress(concThreads);
     std::vector<std::thread> ts;
     unsigned int minBatchSize = width * height / concThreads;
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    auto begin = std::chrono::steady_clock::now();
     for (unsigned int i = 0; i < concThreads; i++) {
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(imgData), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
@@ -134,6 +135,7 @@ void RenderingTask::render() const {
     }
     std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
               << "...\n";
+    std::this_thread::yield();
     while (true) {
         unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
         std::cerr
@@ -141,12 +143,12 @@ void RenderingTask::render() const {
             << "%                                                                                ";
         if (progressSoFar == width * height)
             break;
-        std::this_thread::yield();
+        std::this_thread::sleep_for(1s);
     }
     std::cout << "\n";
     for (auto &t : ts)
         t.join();
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
 
     unsigned int tracedRaysCnt = (recLvl * (1 + lights.size()) + 1) * width * height;
     float tracingTime =
