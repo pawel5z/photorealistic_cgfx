@@ -38,7 +38,9 @@ void RenderingTask::RTWindow::MainLoop() {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.trianglesCnt * sizeof(Triangle),
                      &rt->triangles.at(mesh.firstTriangleIdx), GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 2 * sizeof(glm::vec3), nullptr);
+        glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(Vertex), nullptr);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(Vertex), (void *)sizeof(glm::vec3));
     }
 
     glEnable(GL_DEPTH_TEST);

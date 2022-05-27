@@ -3,8 +3,10 @@
 
 layout(location = 1)uniform vec3 vertexColor;
 
+in vec3 n;
+
 out vec4 color;
 
 void main(void) {
-    color = vec4(vertexColor, 1.f);
+    color = vec4((normalize(n) / 2.f + 0.5f) * vertexColor, 1.f);
 }
