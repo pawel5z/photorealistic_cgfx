@@ -88,7 +88,7 @@ void RenderingTask::RTWindow::MainLoop() {
         if (glfwGetMouseButton(win(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             double xPos, yPos;
             glfwGetCursorPos(win(), &xPos, &yPos);
-            camera.rotate(Transform::UP, (refMouseX - xPos) * angSpd);
+            camera.rotate(Transform::UP, (refMouseX - xPos) * angSpd, Space::WORLD);
             camera.rotate(Transform::RIGHT, (refMouseY - yPos) * angSpd);
         }
         if (glfwGetKey(win(), GLFW_KEY_BACKSPACE) == GLFW_PRESS) {
