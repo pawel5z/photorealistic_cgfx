@@ -27,6 +27,8 @@
 using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
+CacheAlignedCounter::CacheAlignedCounter(unsigned int counter) : counter(counter) {}
+
 RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigned int concThreads)
     : rtcPath(rtcPath), nSamples(nSamples), russianRouletteAlpha(1.f) {
     this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
@@ -128,7 +130,7 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
 
 void RenderingTask::render() const {
     std::vector<std::vector<glm::vec3>> pixels(height, std::vector<glm::vec3>(width, glm::vec3(0)));
-    std::vector<unsigned int> progress(concThreads);
+    std::vector<CacheAlignedCounter> progress(concThreads);
     std::vector<std::thread> ts;
     unsigned int minBatchSize = width * height / concThreads;
     auto begin = std::chrono::steady_clock::now();
@@ -140,7 +142,12 @@ void RenderingTask::render() const {
               << "...\n";
     std::this_thread::yield();
     while (true) {
-        unsigned int progressSoFar = std::accumulate(progress.begin(), progress.end(), 0U);
+        unsigned int progressSoFar =
+            std::accumulate(progress.begin(), progress.end(), CacheAlignedCounter(),
+                            [](const CacheAlignedCounter &a, const CacheAlignedCounter &b) {
+                                return CacheAlignedCounter(a.counter + b.counter);
+                            })
+                .counter;
         std::cerr
             << "\r" << progressSoFar * 100 / (width * height)
             << "%                                                                                ";
@@ -263,7 +270,7 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 const unsigned int from, const unsigned int count,
-                                unsigned int &progress) const {
+                                CacheAlignedCounter &progress) const {
 #ifdef DEBUG
     std::mt19937 randEng(42);
 #else
@@ -277,7 +284,7 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
             pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, cookTorrance, sampler);
         }
         pixels.at(py).at(px) = pixel / float(nSamples);
-        progress++;
+        progress.counter++;
     }
 }
 

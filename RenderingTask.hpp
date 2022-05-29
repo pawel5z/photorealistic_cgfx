@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <memory>
+#include <new>
 #include <random>
 #include <string>
 #include <thread>
@@ -16,6 +17,19 @@
 #include "Ray.hpp"
 #include "ogl_interface/AGL3Window.hpp"
 #include "ogl_interface/Camera.hpp"
+
+#ifdef __cpp_lib_hardware_interference_size
+using std::hardware_destructive_interference_size;
+#else
+constexpr std::size_t hardware_destructive_interference_size = 64;
+#endif
+
+class alignas(hardware_destructive_interference_size) CacheAlignedCounter {
+public:
+    unsigned int counter;
+
+    CacheAlignedCounter(unsigned int counter = 0);
+};
 
 class RenderingTask {
 public:
@@ -79,7 +93,7 @@ private:
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const Light &l) const;
     void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,
-                     const unsigned int count, unsigned int &progress) const;
+                     const unsigned int count, CacheAlignedCounter &progress) const;
     void recomputeCameraParams();
 };
 
