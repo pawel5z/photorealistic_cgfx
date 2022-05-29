@@ -65,3 +65,5 @@
 **/*.exr
 
 raytrace
+
+.gdb_history
