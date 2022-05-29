@@ -29,6 +29,11 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     std::cerr << "Reading data...\n";
 
     std::ifstream configFile(rtcPath);
+    if (!configFile.is_open()) {
+        std::cerr << "Could not open '" + rtcPath + "'.\n";
+        exit(EXIT_FAILURE);
+    }
+
     fs::path rtcDir = fs::path(rtcPath).parent_path();
     std::string line;
 
