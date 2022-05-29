@@ -50,7 +50,7 @@ public:
            unsigned int maxDepth, unsigned int maxLeafCapacity, float emptyBonus,
            float traversalCost, float isectCost);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
-                                 const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
+                                 const std::vector<Vertex> &vertices, double &t, glm::dvec3 &n,
                                  unsigned int &trianIdx) const;
     bool isObstructed(Ray r, const Light &l, const float tLight,
                       const std::vector<Triangle> &triangles,
@@ -65,7 +65,7 @@ private:
     const float emptyBonus;
     const float traversalCost;
     const float isectCost;
-    float rayRangeBias;
+    double rayRangeBias;
 
     /**
      * @param axis 0, 1 or 2 (x, y or z respectively).
@@ -77,7 +77,7 @@ private:
                    std::array<std::vector<BoundEdge>, 3> &edges, unsigned int badRefines);
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,
-                                 float &t, glm::vec3 &n, unsigned int &trianIdx) const;
+                                 double &t, glm::dvec3 &n, unsigned int &trianIdx) const;
     bool isObstructed(Ray r, const Light &l, const float tLight,
                       const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
                       unsigned int nodeIdx) const;

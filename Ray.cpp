@@ -1,3 +1,4 @@
 #include "Ray.hpp"
 
-Ray::Ray(glm::vec3 o, glm::vec3 d, float tMin, float tMax) : o(o), d(d), tMin(tMin), tMax(tMax) {}
+Ray::Ray(glm::dvec3 o, glm::dvec3 d, double tMin, double tMax)
+    : o(o), d(d), tMin(tMin), tMax(tMax) {}

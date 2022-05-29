@@ -208,32 +208,32 @@ Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
 }
 
 glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
-    float t;
-    glm::vec3 n;
+    double t;
+    glm::dvec3 n;
     const Material *mat;
     if (!findNearestIntersection(r, t, n, &mat))
         return {0, 0, 0};
     if (maxDepth == 0 || lights.size() == 0)
         return mat->kd;
     glm::vec3 color = mat->ka * .1f;
-    glm::vec3 hit = r.o + t * r.d;
+    glm::dvec3 hit = r.o + t * r.d;
     for (auto &light : lights) {
         Ray shadowRay = {hit, glm::normalize(light.pos - hit)};
-        float sqDist = glm::distance2(hit, light.pos);
+        double sqDist = glm::distance2(hit, light.pos);
         if (isObstructed(shadowRay, light))
             continue;
-        float dTerm = glm::dot(n, shadowRay.d);
-        color +=
-            (mat->kd * glm::max(0.f, dTerm) +
-             mat->ks * (float)(dTerm > 0.f) *
-                 glm::max(0.f, glm::pow(glm::dot(-r.d, glm::reflect(-shadowRay.d, n)), mat->ns))) *
-            light.color * light.intensity / sqDist;
+        double dTerm = glm::dot(n, shadowRay.d);
+        color += ((glm::dvec3)mat->kd * glm::max(0., dTerm) +
+                  (glm::dvec3)mat->ks * (double)(dTerm > 0.) *
+                      glm::max(0., glm::pow(glm::dot(-r.d, glm::reflect(-shadowRay.d, n)),
+                                            (double)mat->ns))) *
+                 (glm::dvec3)(light.color * light.intensity / (float)sqDist);
     }
     color += mat->ks * traceRay({hit, glm::reflect(r.d, n)}, maxDepth - 1);
     return color;
 }
 
-bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n,
+bool RenderingTask::findNearestIntersection(const Ray &r, double &t, glm::dvec3 &n,
                                             const Material **mat) const {
     unsigned int trianIdx;
     bool ret = kdTree->findNearestIntersection(Ray(r), triangles, vertices, t, n, trianIdx);
@@ -243,8 +243,8 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
 }
 
 bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    glm::vec3 tLightVec = (l.pos - r.o) / r.d;
-    float tLight = std::max({tLightVec.x, tLightVec.y, tLightVec.z});
+    glm::dvec3 tLightVec = ((glm::dvec3)l.pos - r.o) / r.d;
+    double tLight = std::max({tLightVec.x, tLightVec.y, tLightVec.z});
     return kdTree->isObstructed(Ray(r), l, tLight, triangles, vertices);
 }
 

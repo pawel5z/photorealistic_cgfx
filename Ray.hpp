@@ -5,12 +5,13 @@
 
 class Ray {
 public:
-    glm::vec3 o; // origin
-    glm::vec3 d; // direction
-    float tMin;
-    float tMax;
+    glm::dvec3 o; // origin
+    glm::dvec3 d; // direction
+    double tMin;
+    double tMax;
 
-    Ray(glm::vec3 o, glm::vec3 d, float tMin = 0.f, float tMax = std::numeric_limits<float>::max());
+    Ray(glm::dvec3 o, glm::dvec3 d, double tMin = 0.f,
+        double tMax = std::numeric_limits<double>::max());
 };
 
 #endif // !RAY_HPP
