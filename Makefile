@@ -11,7 +11,7 @@ all: $(NAME)
 $(NAME) : $(OBJS)
 	$(CC) $(CFLAGS) -o $(NAME) $^ $(LFLAGS)
 
-debug : CFLAGS += -Og -g -DDEBUG
+debug : CFLAGS = -std=c++17 -g -DDEBUG
 debug : $(NAME)
 
 %.o : %.cpp $(DEPS)
