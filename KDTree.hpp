@@ -54,6 +54,11 @@ private:
     const unsigned int maxDepth;
     std::vector<KDTreeNode> nodes;
     BBox spaceBounds;
+    /**
+     * Used to prune intersections found too close to the ray's origin due to
+     * numerical reasons.
+     */
+    float rayRangeBias;
 
     /**
      * @param axis 0, 1 or 2 (x, y or z respectively).
