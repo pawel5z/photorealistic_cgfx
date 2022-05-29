@@ -264,7 +264,11 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 const unsigned int from, const unsigned int count,
                                 unsigned int &progress) const {
+#ifdef DEBUG
+    std::mt19937 randEng(42);
+#else
     std::mt19937 randEng((std::random_device())());
+#endif // DEBUG
     CosineSampler sampler;
     for (unsigned int p = from; p < from + count; p++) {
         unsigned int px = p % width, py = p / width;
