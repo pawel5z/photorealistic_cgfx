@@ -222,7 +222,6 @@ Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
 
 glm::vec3 RenderingTask::traceRay(
     const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
-    std::uniform_real_distribution<float> &russianRouletteDist,
     const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &, const Material &)> &brdf,
     HemisphereSampler &sampler) const {
     float t;
@@ -238,9 +237,10 @@ glm::vec3 RenderingTask::traceRay(
 
     Ray incoming(r.o + t * r.d, sampler.makeSampleRelativeToNormal(s, n));
     glm::vec3 outgoingRelToNormal = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
+    static thread_local std::uniform_real_distribution<float> russianRouletteDist;
     if (russianRouletteDist(randEng) <= russianRouletteAlpha)
         color += brdf(s, outgoingRelToNormal, *mat) *
-                 traceRay(incoming, maxDepth - 1, randEng, russianRouletteDist, brdf, sampler) *
+                 traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
                  glm::abs(glm::cos(glm::dot(n, incoming.d))) / (prob * russianRouletteAlpha);
 
     return color;
@@ -265,14 +265,12 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 const unsigned int from, const unsigned int count,
                                 unsigned int &progress) const {
     std::mt19937 randEng((std::random_device())());
-    std::uniform_real_distribution<float> russianRouletteDist;
     CosineSampler sampler;
     for (unsigned int p = from; p < from + count; p++) {
         unsigned int px = p % width, py = p / width;
         glm::vec3 pixel(0);
         for (unsigned int i = 0; i < nSamples; i++) {
-            pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, russianRouletteDist,
-                              cookTorrance, sampler);
+            pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, cookTorrance, sampler);
         }
         pixels.at(py).at(px) = pixel / float(nSamples);
         progress++;

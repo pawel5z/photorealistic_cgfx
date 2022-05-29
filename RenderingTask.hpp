@@ -73,7 +73,6 @@ private:
      * @param brdf Takes incoming vector, outgoing vector and material as parameters.
      */
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
-                       std::uniform_real_distribution<float> &russianRouletteDist,
                        const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
                                                      const Material &)> &brdf,
                        HemisphereSampler &sampler) const;
