@@ -256,9 +256,9 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
             const Triangle &tri =
                 triangles.at(leavesElementsIndices.at(node.leavesElementsIndicesOffset + i));
-            Vertex a = vertices.at(tri.indices[0]);
-            Vertex b = vertices.at(tri.indices[1]);
-            Vertex c = vertices.at(tri.indices[2]);
+            const Vertex &a = vertices.at(tri.indices[0]);
+            const Vertex &b = vertices.at(tri.indices[1]);
+            const Vertex &c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
             if (r.tMin - rayRangeBias < t && t < tNearest) {
@@ -315,9 +315,9 @@ bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
         for (int i = 0; i < node.getTrianglesCnt(); i++) {
             const Triangle &tri =
                 triangles.at(leavesElementsIndices.at(node.leavesElementsIndicesOffset + i));
-            Vertex a = vertices.at(tri.indices[0]);
-            Vertex b = vertices.at(tri.indices[1]);
-            Vertex c = vertices.at(tri.indices[2]);
+            const Vertex &a = vertices.at(tri.indices[0]);
+            const Vertex &b = vertices.at(tri.indices[1]);
+            const Vertex &c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
             if (r.tMin + rayRangeBias < t && t < tLight)
