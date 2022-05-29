@@ -12,17 +12,18 @@ int main(int argc, const char *argv[]) {
     po::options_description hidden;
     hidden.add_options()("rtc_file", po::value<std::string>(), "rendering task configuration file");
 
-    po::options_description desc( //
+    po::options_description desc(
         "Usage: ./raytrace [OPTION...] RTC_FILE\n"
         "Render scene specified in RTC_FILE using ray tracing.\n"
         "Options");
-    desc.add_options()                                           //
-        ("help,h", po::bool_switch(), "print this help message") //
+    desc.add_options()
+        ("help,h", po::bool_switch(), "Print this help message.")
         ("threads,n", po::value<int>()->default_value(-1),
          "Number of threads used for rendering. -1 (default) means number of available CPU "
-         "cores.") //
+         "cores.")
+        ("samples,s", po::value<unsigned int>()->default_value(1024), "Number of samples per pixel.")
         ("preview,p", po::bool_switch(),
-         "preview scene\n"
+         "Preview scene.\n"
          "Controls:\n"
          " LMB+move: \tlook around\n"
          " w: \tmove forward\n"
@@ -52,7 +53,7 @@ int main(int argc, const char *argv[]) {
         return 0;
     }
 
-    RenderingTask rt(vm.at("rtc_file").as<std::string>(), vm.at("threads").as<int>());
+    RenderingTask rt(vm.at("rtc_file").as<std::string>(), vm.at("samples").as<unsigned int>(), vm.at("threads").as<int>());
     if (vm.at("preview").as<bool>())
         rt.preview();
     if (rt.renderPreview || !vm.at("preview").as<bool>()) {

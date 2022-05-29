@@ -3,10 +3,12 @@
 
 #include <glm/glm.hpp>
 #include <memory>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "HemisphereSampler.hpp"
 #include "KDTree.hpp"
 #include "Light.hpp"
 #include "Material.hpp"
@@ -32,7 +34,8 @@ public:
     glm::vec3 right;
     bool renderPreview = false;
 
-    RenderingTask(std::string path, unsigned int concThreads = std::thread::hardware_concurrency());
+    RenderingTask(std::string rtcPath, unsigned int nSamples,
+                  unsigned int concThreads = std::thread::hardware_concurrency());
     void render() const;
     void preview();
     friend std::ostream &operator<<(std::ostream &os, const RenderingTask *rt);
@@ -52,7 +55,6 @@ private:
     };
     friend RTWindow;
 
-    std::vector<Light> lights;
     std::vector<Material> mats;
     std::vector<Mesh> meshes;
     std::vector<Vertex> vertices;
@@ -63,9 +65,18 @@ private:
     std::vector<unsigned int> trianglesToMatIndices;
     std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
+    unsigned int nSamples;
+    float russianRouletteAlpha;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;
-    glm::vec3 traceRay(const Ray &r, unsigned int maxDepth) const;
+    /**
+     * @param brdf Takes incoming vector, outgoing vector and material as parameters.
+     */
+    glm::vec3 traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
+                       std::uniform_real_distribution<float> &russianRouletteDist,
+                       const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
+                                                     const Material &)> &brdf,
+                       HemisphereSampler &sampler) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const Light &l) const;
     void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,

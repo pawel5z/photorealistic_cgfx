@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/norm.hpp>
 #include <iostream>
@@ -16,6 +17,9 @@
 #include <thread>
 
 #include "RenderingTask.hpp"
+
+#include "BRDFs.hpp"
+#include "HemisphereSampler.hpp"
 #include "ogl_interface/Axes.hpp"
 #include "ogl_interface/Camera.hpp"
 #include "utils.hpp"
@@ -23,7 +27,8 @@
 using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
-RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rtcPath(rtcPath) {
+RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigned int concThreads)
+    : rtcPath(rtcPath), nSamples(nSamples), russianRouletteAlpha(1.f) {
     this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
 
     std::cerr << "Reading data...\n";
@@ -84,15 +89,6 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int concThreads) : rt
     }
 
     recomputeCameraParams();
-
-    while (!configFile.eof()) {
-        try {
-            std::getline(configFile, line);
-            lights.emplace_back(line);
-        } catch (std::exception &e) {
-            std::cerr << e.what() << '\n';
-        }
-    }
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(objPath, aiProcess_Triangulate | aiProcess_GenNormals |
@@ -157,11 +153,9 @@ void RenderingTask::render() const {
         t.join();
     auto end = std::chrono::steady_clock::now();
 
-    unsigned int tracedRaysCnt = (recLvl * (1 + lights.size()) + 1) * width * height;
     float tracingTime =
         std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
-    std::cout << "Traced " << tracedRaysCnt << " rays in " << tracingTime << " seconds.\n"
-              << tracedRaysCnt / tracingTime << " rays per second\n";
+    std::cout << "Rendering time: " << tracingTime << " seconds.\n";
 
     // saving to file
     std::array<std::vector<half>, 3> imgData{std::vector<half>(width * height, 0),
@@ -206,12 +200,6 @@ std::ostream &operator<<(std::ostream &os, const RenderingTask *rt) {
        << rt->lookAt.x << ' ' << rt->lookAt.y << ' ' << rt->lookAt.z << '\n'
        << rt->up.x << ' ' << rt->up.y << ' ' << rt->up.z << '\n'
        << rt->yView;
-    for (const auto &light : rt->lights) {
-        std::vector<unsigned char> byteCol = light.getByteColor();
-        os << "\nL " << light.pos.x << ' ' << light.pos.y << ' ' << light.pos.z << ' '
-           << (int)byteCol.at(0) << ' ' << (int)byteCol.at(1) << ' ' << (int)byteCol.at(2) << ' '
-           << light.intensity;
-    }
     return os;
 }
 
@@ -232,30 +220,29 @@ Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
                                       right * ((float)px * 2.f / (float)(width - 1) - 1.f))};
 }
 
-glm::vec3 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth) const {
+glm::vec3 RenderingTask::traceRay(
+    const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
+    std::uniform_real_distribution<float> &russianRouletteDist,
+    const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &, const Material &)> &brdf,
+    HemisphereSampler &sampler) const {
     float t;
     glm::vec3 n;
     const Material *mat;
-    if (!findNearestIntersection(r, t, n, &mat))
+    if (maxDepth == 0 || !findNearestIntersection(r, t, n, &mat))
         return {0, 0, 0};
-    if (maxDepth == 0 || lights.size() == 0)
-        return mat->kd;
-    glm::vec3 color = mat->ka * .1f;
-    glm::vec3 hit = r.o + t * r.d;
-    for (auto &light : lights) {
-        Ray shadowRay = {hit, glm::normalize(light.pos - hit)};
-        float sqDist = glm::distance2(hit, light.pos);
-        if (isObstructed(shadowRay, light))
-            continue;
-        float dTerm = glm::dot(n, shadowRay.d);
-        color +=
-            (mat->kd * glm::max(0.f, dTerm) +
-             mat->ks * (float)(dTerm > 0.f) *
-                 glm::max(0.f, glm::pow(glm::dot(-r.d, glm::reflect(-shadowRay.d, n)), mat->ns))) *
-            light.color * light.intensity / sqDist;
-    }
-    if (mat->ks.r != 0.f || mat->ks.g != 0.f || mat->ks.b != 0.f)
-        color += mat->ks * traceRay({hit, glm::reflect(r.d, n)}, maxDepth - 1);
+
+    glm::vec3 color = mat->ke;
+    auto [s, prob] = sampler();
+    if (prob == 0.f)
+        return color;
+
+    Ray incoming(r.o + t * r.d, sampler.makeSampleRelativeToNormal(s, n));
+    glm::vec3 outgoingRelToNormal = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
+    if (russianRouletteDist(randEng) <= russianRouletteAlpha)
+        color += brdf(s, outgoingRelToNormal, *mat) *
+                 traceRay(incoming, maxDepth - 1, randEng, russianRouletteDist, brdf, sampler) *
+                 glm::abs(glm::cos(glm::dot(n, incoming.d))) / (prob * russianRouletteAlpha);
+
     return color;
 }
 
@@ -277,9 +264,17 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 const unsigned int from, const unsigned int count,
                                 unsigned int &progress) const {
+    std::mt19937 randEng((std::random_device())());
+    std::uniform_real_distribution<float> russianRouletteDist;
+    CosineSampler sampler;
     for (unsigned int p = from; p < from + count; p++) {
         unsigned int px = p % width, py = p / width;
-        pixels.at(py).at(px) = glm::clamp(traceRay(getPrimaryRay(px, py), recLvl), 0.f, 1.f);
+        glm::vec3 pixel(0);
+        for (unsigned int i = 0; i < nSamples; i++) {
+            pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, russianRouletteDist,
+                              cookTorrance, sampler);
+        }
+        pixels.at(py).at(px) = pixel / float(nSamples);
         progress++;
     }
 }
