@@ -72,6 +72,9 @@ KDTree::KDTree(const std::vector<Triangle> &triangles, const std::vector<Vertex>
               0);
 
     rayRangeBias = .01f;
+    // rayRangeBias = heuristicClosestDist(vertices);
+    std::cerr << "Heuristic closest distance between two vertices: " << rayRangeBias << '\n';
+    // rayRangeBias /= 100.f;
 }
 
 bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
@@ -314,4 +317,53 @@ void KDTree::createLeafNode(const std::vector<unsigned int> &trianglesIndices,
     nodes.push_back(node);
     if (parentNodeIdx != ~0u && aboveSplit)
         nodes.at(parentNodeIdx).setAboveChild(nodes.size() - 1);
+}
+
+// https://airccj.org/CSCP/vol5/csit54302.pdf
+float KDTree::heuristicClosestDist(const std::vector<Vertex> &vertices) {
+    const unsigned int n = vertices.size();
+
+    std::array<glm::vec3, 6> ps;
+    for (unsigned int i = 0; i < ps.size() / 2; i++) {
+        ps.at(2 * i) = std::min_element(vertices.begin(), vertices.end(),
+                                        [i](const Vertex &lhs, const Vertex &rhs) {
+                                            return lhs.pos[i] < rhs.pos[i];
+                                        })
+                           ->pos;
+        ps.at(2 * i + 1) = std::max_element(vertices.begin(), vertices.end(),
+                                            [i](const Vertex &lhs, const Vertex &rhs) {
+                                                return lhs.pos[i] < rhs.pos[i];
+                                            })
+                               ->pos;
+    }
+
+    std::array<std::vector<float>, 6> ds({std::vector<float>(n), std::vector<float>(n),
+                                          std::vector<float>(n), std::vector<float>(n),
+                                          std::vector<float>(n), std::vector<float>(n)});
+    for (unsigned int i = 0; i < ds.size(); i++)
+        for (unsigned int j = 0; j < n; j++)
+            ds.at(i).at(j) = glm::distance2(ps.at(i), vertices.at(j).pos);
+
+    std::vector<float> sum(n);
+    for (unsigned int i = 0; i < n; i++)
+        sum.at(i) = 11.f * ds.at(0).at(i) + 101.f * ds.at(1).at(i) + 547.f * ds.at(2).at(i) +
+                    1009.f * ds.at(3).at(i) + 5501.f * ds.at(4).at(i) + 10007.f * ds.at(5).at(i);
+
+    std::vector<unsigned int> indices(n);
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::stable_sort(
+        indices.begin(), indices.end(),
+        [&](const unsigned int &i, const unsigned int &j) { return sum.at(i) < sum.at(j); });
+
+    float min = std::numeric_limits<float>::max();
+    for (unsigned int i = 0; i < n; i++)
+        for (unsigned int j = 1; j <= std::min(100ul, indices.size() - i - 1); j++) {
+            float sqDist =
+                glm::distance2(vertices.at(indices.at(i)).pos, vertices.at(indices.at(i + j)).pos);
+            if (sqDist < min && sqDist > 0.f)
+                min = sqDist;
+        }
+
+    return std::sqrt(min);
 }

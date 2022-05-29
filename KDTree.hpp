@@ -83,6 +83,8 @@ private:
                       unsigned int nodeIdx) const;
     void createLeafNode(const std::vector<unsigned int> &trianglesIndices,
                         unsigned int parentNodeIdx, bool aboveSplit);
+    // https://airccj.org/CSCP/vol5/csit54302.pdf
+    float heuristicClosestDist(const std::vector<Vertex> &vertices);
 };
 
 #endif // !KDTREE_HPP
