@@ -1,8 +1,10 @@
 #ifndef RENDERING_TASK_HPP
 #define RENDERING_TASK_HPP
 
+#include <chrono>
 #include <glm/glm.hpp>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <random>
 #include <string>
@@ -93,7 +95,8 @@ private:
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const Light &l) const;
     void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,
-                     const unsigned int count, CacheAlignedCounter &progress) const;
+                     const unsigned int count, CacheAlignedCounter &progress,
+                     std::chrono::steady_clock::time_point &ts, std::mutex &tsLock) const;
     void recomputeCameraParams();
 };
 

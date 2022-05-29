@@ -5,7 +5,6 @@
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
-#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -14,14 +13,11 @@
 #include <glm/gtx/norm.hpp>
 #include <iostream>
 #include <numeric>
-#include <thread>
 
 #include "RenderingTask.hpp"
 
 #include "BRDFs.hpp"
-#include "HemisphereSampler.hpp"
 #include "ogl_interface/Axes.hpp"
-#include "ogl_interface/Camera.hpp"
 #include "utils.hpp"
 
 using namespace std::chrono_literals;
@@ -134,10 +130,12 @@ void RenderingTask::render() const {
     std::vector<std::thread> ts;
     unsigned int minBatchSize = width * height / concThreads;
     auto begin = std::chrono::steady_clock::now();
+    auto end = begin;
+    std::mutex endLock;
     for (unsigned int i = 0; i < concThreads; i++)
         ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(pixels), i * minBatchSize,
                         i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
-                        std::ref(progress.at(i)));
+                        std::ref(progress.at(i)), std::ref(end), std::ref(endLock));
     std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
               << "...\n";
     std::this_thread::yield();
@@ -158,7 +156,6 @@ void RenderingTask::render() const {
     std::cout << "\n";
     for (auto &t : ts)
         t.join();
-    auto end = std::chrono::steady_clock::now();
 
     float tracingTime =
         std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
@@ -270,7 +267,9 @@ bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
 
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
                                 const unsigned int from, const unsigned int count,
-                                CacheAlignedCounter &progress) const {
+                                CacheAlignedCounter &progress,
+                                std::chrono::steady_clock::time_point &ts,
+                                std::mutex &tsLock) const {
 #ifdef DEBUG
     std::mt19937 randEng(42);
 #else
@@ -286,6 +285,12 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
         pixels.at(py).at(px) = pixel / float(nSamples);
         progress.counter++;
     }
+
+    auto end = std::chrono::steady_clock::now();
+    tsLock.lock();
+    if (end > ts)
+        ts = end;
+    tsLock.unlock();
 }
 
 void RenderingTask::recomputeCameraParams() {
