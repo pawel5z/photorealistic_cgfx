@@ -79,6 +79,8 @@ private:
      * This cannot be kept in Triangle struct, because Triangle structs are passed to element
      * buffer in OpenGL. */
     std::vector<unsigned int> trianglesToMatIndices;
+    /* Stores indices to triangles vector that have non-zero emission. */
+    std::vector<unsigned int> lightIndices;
     std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
     unsigned int nSamples;

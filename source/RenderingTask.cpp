@@ -121,6 +121,12 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
         }
     }
 
+    for (unsigned int tIdx = 0; tIdx < triangles.size(); tIdx++) {
+        glm::vec3 ke = mats.at(trianglesToMatIndices.at(tIdx)).ke;
+        if (ke.r != 0.f || ke.g != 0.f || ke.b != 0.f)
+            lightIndices.push_back(tIdx);
+    }
+
     std::cerr << triangles.size() << " triangles\n";
 }
 
@@ -232,14 +238,29 @@ glm::vec3 RenderingTask::traceRay(
         return {0, 0, 0};
 
     glm::vec3 color = mat->ke;
+
+    // sample random light
+    static thread_local std::uniform_int_distribution<unsigned int> lightIdxDist(
+        0, lightIndices.size() - 1);
+    unsigned int lightIdx = lightIndices.at(lightIdxDist(randEng));
+    const Triangle &light = triangles.at(lightIdx);
+    static thread_local std::uniform_real_distribution<float> uniDist;
+    float alpha = uniDist(randEng);
+    float beta = 1.f - alpha;
+    glm::vec3 randLightPoint =
+        alpha * (vertices.at(light.indices[1]).pos - vertices.at(light.indices[0]).pos) +
+        beta * (vertices.at(light.indices[2]).pos - vertices.at(light.indices[0]).pos);
+    glm::vec3 hit = r.o + t * r.d;
+    if (!isObstructed(Ray(hit, glm::normalize(randLightPoint - hit)), randLightPoint))
+        color += mats.at(trianglesToMatIndices.at(lightIdx)).ke / float(lightIndices.size());
+
+    // sample random incoming vector
     auto [s, prob] = sampler();
     if (prob == 0.f)
         return color;
-
-    Ray incoming(r.o + t * r.d, sampler.makeSampleRelativeToNormal(s, n));
+    Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
     glm::vec3 outgoingRelToUp = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
-    static thread_local std::uniform_real_distribution<float> russianRouletteDist;
-    if (russianRouletteDist(randEng) <= russianRouletteAlpha)
+    if (uniDist(randEng) <= russianRouletteAlpha)
         color += brdf(s, outgoingRelToUp, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
                  glm::abs(glm::cos(glm::dot(n, incoming.d))) / (prob * russianRouletteAlpha);
