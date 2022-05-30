@@ -16,6 +16,7 @@ struct Triangle {
     unsigned int indices[3];
 
     glm::vec3 getCenter(const std::vector<Vertex> &vertices) const;
+    float area(const std::vector<Vertex> &vertices) const;
 };
 
 class Mesh {
