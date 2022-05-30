@@ -24,6 +24,6 @@ clean :
 	@find . -name '*.o' -delete
 
 distclean : clean
-	@rm -f $(NAME)
+	@rm -f $(NAME) test
 
 .PHONY : clean distclean debug
