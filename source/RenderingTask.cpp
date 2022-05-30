@@ -140,12 +140,9 @@ void RenderingTask::render() const {
               << "...\n";
     std::this_thread::yield();
     while (true) {
-        unsigned int progressSoFar =
-            std::accumulate(progress.begin(), progress.end(), CacheAlignedCounter(),
-                            [](const CacheAlignedCounter &a, const CacheAlignedCounter &b) {
-                                return CacheAlignedCounter(a.counter + b.counter);
-                            })
-                .counter;
+        unsigned int progressSoFar = 0;
+        for (const auto &counter : progress)
+            progressSoFar += counter.counter;
         std::cerr
             << "\r" << progressSoFar * 100 / (width * height)
             << "%                                                                                ";
