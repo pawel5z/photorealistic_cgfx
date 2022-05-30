@@ -85,11 +85,10 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     return findNearestIntersection(r, triangles, vertices, 0, t, n, trianIdx);
 }
 
-bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
-                          const std::vector<Triangle> &triangles,
+bool KDTree::isObstructed(Ray r, const float target, const std::vector<Triangle> &triangles,
                           const std::vector<Vertex> &vertices) const {
     r.o += r.d * rayRangeBias;
-    return isObstructed(r, l, tLight, triangles, vertices, 0);
+    return isObstructed(r, target, triangles, vertices, 0);
 }
 
 void KDTree::buildTreeSAH(const std::vector<unsigned int> &trianglesIndices, unsigned int depth,
@@ -300,8 +299,7 @@ bool KDTree::findNearestIntersection(Ray r, const std::vector<Triangle> &triangl
     }
 }
 
-bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
-                          const std::vector<Triangle> &triangles,
+bool KDTree::isObstructed(Ray r, const float target, const std::vector<Triangle> &triangles,
                           const std::vector<Vertex> &vertices, unsigned int nodeIdx) const {
     if (r.tMax < r.tMin)
         return false;
@@ -320,7 +318,7 @@ bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
             const Vertex &c = vertices.at(tri.indices[2]);
             if (!glm::intersectRayTriangle(r.o, r.d, a.pos, b.pos, c.pos, baryPos, t))
                 continue;
-            if (r.tMin + rayRangeBias < t && t < tLight)
+            if (r.tMin + rayRangeBias < t && t < target)
                 return true;
         }
         return false;
@@ -339,15 +337,14 @@ bool KDTree::isObstructed(Ray r, const Light &l, const float tLight,
     }
     float tPlane = (node.getSplitPos() - r.o[splitAxis]) / r.d[splitAxis];
     if (tPlane > r.tMax || tPlane <= 0)
-        return isObstructed(r, l, tLight, triangles, vertices, firstChildIdx);
+        return isObstructed(r, target, triangles, vertices, firstChildIdx);
     else if (tPlane < r.tMin)
-        return isObstructed(r, l, tLight, triangles, vertices, secondChildIdx);
+        return isObstructed(r, target, triangles, vertices, secondChildIdx);
     else {
-        if (isObstructed(Ray(r.o, r.d, r.tMin, tPlane), l, tLight, triangles, vertices,
-                         firstChildIdx))
+        if (isObstructed(Ray(r.o, r.d, r.tMin, tPlane), target, triangles, vertices, firstChildIdx))
             return true;
         else
-            return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), l, tLight, triangles, vertices,
+            return isObstructed(Ray(r.o, r.d, tPlane, r.tMax), target, triangles, vertices,
                                 secondChildIdx);
     }
 }

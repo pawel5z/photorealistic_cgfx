@@ -256,10 +256,10 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
     return ret;
 }
 
-bool RenderingTask::isObstructed(const Ray &r, const Light &l) const {
-    glm::vec3 tLightVec = (l.pos - r.o) / r.d;
-    float tLight = std::max({tLightVec.x, tLightVec.y, tLightVec.z});
-    return kdTree->isObstructed(Ray(r), l, tLight, triangles, vertices);
+bool RenderingTask::isObstructed(const Ray &r, const glm::vec3 &point) const {
+    glm::vec3 tVec = (point - r.o) / r.d;
+    float target = std::max({tVec.x, tVec.y, tVec.z});
+    return kdTree->isObstructed(Ray(r), target, triangles, vertices);
 }
 
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,

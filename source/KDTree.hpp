@@ -52,8 +52,7 @@ public:
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, float &t, glm::vec3 &n,
                                  unsigned int &trianIdx) const;
-    bool isObstructed(Ray r, const Light &l, const float tLight,
-                      const std::vector<Triangle> &triangles,
+    bool isObstructed(Ray r, const float target, const std::vector<Triangle> &triangles,
                       const std::vector<Vertex> &vertices) const;
 
 private:
@@ -80,9 +79,8 @@ private:
     bool findNearestIntersection(Ray r, const std::vector<Triangle> &triangles,
                                  const std::vector<Vertex> &vertices, unsigned int nodeIdx,
                                  float &t, glm::vec3 &n, unsigned int &trianIdx) const;
-    bool isObstructed(Ray r, const Light &l, const float tLight,
-                      const std::vector<Triangle> &triangles, const std::vector<Vertex> &vertices,
-                      unsigned int nodeIdx) const;
+    bool isObstructed(Ray r, const float target, const std::vector<Triangle> &triangles,
+                      const std::vector<Vertex> &vertices, unsigned int nodeIdx) const;
     void createLeafNode(const std::vector<unsigned int> &trianglesIndices,
                         unsigned int parentNodeIdx, bool aboveSplit);
 };

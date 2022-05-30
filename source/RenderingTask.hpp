@@ -93,7 +93,7 @@ private:
                                                      const Material &)> &brdf,
                        HemisphereSampler &sampler) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
-    bool isObstructed(const Ray &r, const Light &l) const;
+    bool isObstructed(const Ray &r, const glm::vec3 &point) const;
     void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,
                      const unsigned int count, CacheAlignedCounter &progress,
                      std::chrono::steady_clock::time_point &ts, std::mutex &tsLock) const;
