@@ -237,10 +237,10 @@ glm::vec3 RenderingTask::traceRay(
         return color;
 
     Ray incoming(r.o + t * r.d, sampler.makeSampleRelativeToNormal(s, n));
-    glm::vec3 outgoingRelToNormal = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
+    glm::vec3 outgoingRelToUp = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
     static thread_local std::uniform_real_distribution<float> russianRouletteDist;
     if (russianRouletteDist(randEng) <= russianRouletteAlpha)
-        color += brdf(s, outgoingRelToNormal, *mat) *
+        color += brdf(s, outgoingRelToUp, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
                  glm::abs(glm::cos(glm::dot(n, incoming.d))) / (prob * russianRouletteAlpha);
 
