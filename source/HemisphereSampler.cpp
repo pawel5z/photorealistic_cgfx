@@ -49,3 +49,15 @@ float BeckmannSampler::pdf(const glm::vec3 &v) const {
     return glm::sin(theta) * glm::exp(-glm::pow(glm::tan(theta), 2.f) / .25f) /
            (glm::pi<float>() * .25f * glm::pow(v.y, 3.f));
 }
+
+// uniform sampler
+
+glm::vec3 UniformSampler::sample() {
+    float r2 = dist(randEng);
+    float twoPiRandom = glm::two_pi<float>() * dist(randEng),
+          sqrtOneSubSqRand = glm::sqrt(1.f - r2 * r2);
+    return glm::vec3(glm::cos(twoPiRandom) * sqrtOneSubSqRand, r2,
+                     glm::sin(twoPiRandom) * sqrtOneSubSqRand);
+}
+
+float UniformSampler::pdf(const glm::vec3 &v) const { return glm::one_over_two_pi<float>(); }

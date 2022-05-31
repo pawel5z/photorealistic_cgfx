@@ -38,3 +38,12 @@ public:
 private:
     std::uniform_real_distribution<float> dist;
 };
+
+class UniformSampler : public RandomHemisphereSampler {
+public:
+    glm::vec3 sample() override;
+    float pdf(const glm::vec3 &v) const override;
+
+private:
+    std::uniform_real_distribution<float> dist;
+};
