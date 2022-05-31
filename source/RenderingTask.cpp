@@ -26,7 +26,7 @@ namespace fs = std::filesystem;
 CacheAlignedCounter::CacheAlignedCounter(unsigned int counter) : counter(counter) {}
 
 RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigned int concThreads)
-    : rtcPath(rtcPath), nSamples(nSamples), russianRouletteAlpha(1.f) {
+    : rtcPath(rtcPath), nSamples(nSamples) {
     this->concThreads = std::max(1U, std::min(std::thread::hardware_concurrency(), concThreads));
 
     std::cerr << "Reading data...\n";
@@ -227,10 +227,11 @@ Ray RenderingTask::getPrimaryRay(unsigned int px, unsigned int py) const {
                                       right * ((float)px * 2.f / (float)(width - 1) - 1.f))};
 }
 
-glm::vec3 RenderingTask::traceRay(
-    const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
-    const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &, const Material &)> &brdf,
-    HemisphereSampler &sampler) const {
+glm::vec3
+RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
+                        const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
+                                                      const glm::vec3 &, const Material &)> &brdf,
+                        HemisphereSampler &sampler) const {
     float t;
     glm::vec3 n;
     const Material *mat;
@@ -238,32 +239,42 @@ glm::vec3 RenderingTask::traceRay(
         return {0, 0, 0};
 
     glm::vec3 color = mat->ke;
-
-    // sample random light
-    static thread_local std::uniform_int_distribution<unsigned int> lightIdxDist(
-        0, lightIndices.size() - 1);
-    unsigned int lightIdx = lightIndices.at(lightIdxDist(randEng));
-    const Triangle &light = triangles.at(lightIdx);
-    static thread_local std::uniform_real_distribution<float> uniDist;
-    float alpha = uniDist(randEng);
-    float beta = 1.f - alpha;
-    glm::vec3 randLightPoint =
-        alpha * (vertices.at(light.indices[1]).pos - vertices.at(light.indices[0]).pos) +
-        beta * (vertices.at(light.indices[2]).pos - vertices.at(light.indices[0]).pos);
-    glm::vec3 hit = r.o + t * r.d;
-    if (!isObstructed(Ray(hit, glm::normalize(randLightPoint - hit)), randLightPoint))
-        color += mats.at(trianglesToMatIndices.at(lightIdx)).ke / float(lightIndices.size());
+    if (color.r != 0.f || color.g != 0.f || color.b != 0.f)
+        return color;
 
     // sample random incoming vector
     auto [s, prob] = sampler();
     if (prob == 0.f)
         return color;
-    Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
-    glm::vec3 outgoingRelToUp = glm::rotate(glm::rotation(n, glm::vec3(0, 1, 0)), -r.d);
-    if (uniDist(randEng) <= russianRouletteAlpha)
-        color += brdf(s, outgoingRelToUp, *mat) *
+    glm::vec3 hit = r.o + t * r.d;
+
+    static thread_local std::uniform_real_distribution<float> uniDist;
+    // sample random light if possible
+    if (lightIndices.size() != 0) {
+        static thread_local std::uniform_int_distribution<unsigned int> lightIdxDist(
+            0, lightIndices.size() - 1);
+        unsigned int lightIdx = lightIndices.at(lightIdxDist(randEng));
+        const Triangle &light = triangles.at(lightIdx);
+        float alpha = uniDist(randEng);
+        float beta = 1.f - alpha;
+        glm::vec3 randLightPoint =
+            alpha * (vertices.at(light.indices[1]).pos - vertices.at(light.indices[0]).pos) +
+            beta * (vertices.at(light.indices[2]).pos - vertices.at(light.indices[0]).pos);
+        Ray lightRay(hit, glm::normalize(randLightPoint - hit));
+        if (!isObstructed(lightRay, randLightPoint))
+            color += mats.at(trianglesToMatIndices.at(lightIdx)).ke *
+                     brdf(lightRay.d, -r.d, n, *mat) * glm::abs(glm::dot(n, lightRay.d)) *
+                     float(lightIndices.size());
+    }
+
+    float russianRouletteAlpha =
+        (mat->kd.r + mat->kd.g + mat->kd.b + mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
+    if (uniDist(randEng) <= russianRouletteAlpha) {
+        Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
+        color += brdf(incoming.d, -r.d, n, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
-                 glm::abs(glm::cos(glm::dot(n, incoming.d))) / (prob * russianRouletteAlpha);
+                 glm::abs(glm::dot(n, incoming.d)) / (prob * russianRouletteAlpha);
+    }
 
     return color;
 }

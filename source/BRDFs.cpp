@@ -3,10 +3,11 @@
 
 #include "BRDFs.hpp"
 
-glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const Material &mat) {
+glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
+                       const Material &mat) {
     glm::vec3 half = glm::normalize(incoming + outgoing);
-    float thetaI = glm::acos(incoming.y), thetaH = glm::acos(half.y),
-          thetaO = glm::acos(outgoing.y), beta = glm::acos(glm::dot(half, outgoing));
+    float thetaI = glm::acos(glm::dot(incoming, n)), thetaH = glm::acos(glm::dot(half, n)),
+          thetaO = glm::acos(glm::dot(outgoing, n)), beta = glm::acos(glm::dot(half, outgoing));
     return mat.kd * glm::one_over_pi<float>() +
            mat.ks * fresnel(beta, mat.ni) * beckmannDist(thetaH, .5f) *
                geometryMaskingAndShadowing(thetaH, thetaI, thetaO, beta) /

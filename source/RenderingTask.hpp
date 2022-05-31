@@ -84,15 +84,15 @@ private:
     std::unique_ptr<KDTree> kdTree;
     unsigned int concThreads;
     unsigned int nSamples;
-    float russianRouletteAlpha;
 
     Ray getPrimaryRay(unsigned int px, unsigned int py) const;
     /**
-     * @param brdf Takes incoming vector, outgoing vector and material as parameters.
+     * @param brdf Takes incoming vector, outgoing vector, surface normal vector and material as
+     * parameters.
      */
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
                        const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
-                                                     const Material &)> &brdf,
+                                                     const glm::vec3 &, const Material &)> &brdf,
                        HemisphereSampler &sampler) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const glm::vec3 &point) const;
