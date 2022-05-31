@@ -7,23 +7,34 @@ class HemisphereSampler {
 public:
     static glm::vec3 makeSampleRelativeToNormal(const glm::vec3 &s, const glm::vec3 &n);
 
-    virtual std::tuple<glm::vec3, float> operator()() = 0;
+    std::tuple<glm::vec3, float> operator()();
     std::tuple<glm::vec3, float> operator()(const glm::vec3 &n);
+    virtual glm::vec3 sample() = 0;
     virtual float pdf(const glm::vec3 &v) const = 0;
 };
 
-class CosineSampler : public HemisphereSampler {
+class RandomHemisphereSampler : public HemisphereSampler {
 public:
-    CosineSampler();
-    std::tuple<glm::vec3, float> operator()() override;
-    float pdf(const glm::vec3 &v) const override;
+    RandomHemisphereSampler();
 
 protected:
     std::mt19937 randEng;
+};
+
+class CosineSampler : public RandomHemisphereSampler {
+public:
+    glm::vec3 sample() override;
+    float pdf(const glm::vec3 &v) const override;
+
+private:
     std::uniform_real_distribution<float> dist;
 };
 
-class BeckmannSampler : public CosineSampler {
+class BeckmannSampler : public RandomHemisphereSampler {
 public:
-    std::tuple<glm::vec3, float> operator()() override;
+    glm::vec3 sample() override;
+    float pdf(const glm::vec3 &v) const override;
+
+private:
+    std::uniform_real_distribution<float> dist;
 };
