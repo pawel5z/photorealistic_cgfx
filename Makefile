@@ -6,10 +6,10 @@ NAME = raytrace
 OBJS = $(shell find . -name '*.cpp' -a -not \( -name main.cpp -or -name test.cpp \) | sed 's/\.cpp/\.o/')
 DEPS = $(shell find . -name '*.hpp')
 
+all: $(NAME) test
+
 $(NAME) : source/main.o $(OBJS)
 	$(CC) $(CFLAGS) -o $(NAME) $^ $(LFLAGS)
-
-all: $(NAME) test
 
 test : source/test.o $(OBJS)
 	$(CC) $(CFLAGS) -o test $^ $(LFLAGS)
