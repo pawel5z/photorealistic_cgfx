@@ -5,8 +5,8 @@
 
 glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const Material &mat) {
     glm::vec3 half = glm::normalize(incoming + outgoing);
-    float thetaI = glm::asin(incoming.y), thetaH = glm::asin(half.y),
-          thetaO = glm::asin(outgoing.y), beta = glm::acos(glm::dot(half, outgoing));
+    float thetaI = glm::acos(incoming.y), thetaH = glm::acos(half.y),
+          thetaO = glm::acos(outgoing.y), beta = glm::acos(glm::dot(half, outgoing));
     return mat.kd * glm::one_over_pi<float>() +
            mat.ks * fresnel(beta, mat.ni) * beckmannDist(thetaH, .5f) *
                geometryMaskingAndShadowing(thetaH, thetaI, thetaO, beta) /
