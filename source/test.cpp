@@ -4,10 +4,7 @@
 
 #include "HemisphereSampler.hpp"
 
-std::ostream &operator<<(std::ostream &os, const glm::vec3 &v) {
-    os << v[0] << ' ' << v[1] << ' ' << v[2] << ' ' << glm::length(v);
-    return os;
-}
+#include "utils.hpp"
 
 static void printSamplerResults(HemisphereSampler &&sampler) {
     std::cout << "CosineSampler" << '\n';

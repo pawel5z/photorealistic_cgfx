@@ -1,6 +1,4 @@
-#include <epoxy/gl.h>
 #include <fstream>
-#include <iostream>
 #include <vector>
 
 #include "utils.hpp"
@@ -112,3 +110,8 @@ void getShaderSource(GLuint sId, const char *file) {
  * AGL3:  GL/GLFW init AGLWindow and AGLDrawable class definitions
  * Ver.3  14.I.2020 (c) A. Łukaszewski
  */
+
+std::ostream &operator<<(std::ostream &os, const glm::vec3 &v) {
+    os << v[0] << ' ' << v[1] << ' ' << v[2] << ' ' << glm::length(v);
+    return os;
+}
