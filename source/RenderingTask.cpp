@@ -21,6 +21,7 @@
 #include "utils.hpp"
 
 using namespace std::chrono_literals;
+using namespace std::string_literals;
 namespace fs = std::filesystem;
 
 CacheAlignedCounter::CacheAlignedCounter(unsigned int counter) : counter(counter) {}
@@ -117,7 +118,11 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             aiVector3D v = mesh->mVertices[i];
             aiVector3D n = mesh->mNormals[i];
-            vertices.push_back({{v.x, v.y, v.z}, glm::normalize(glm::vec3(n.x, n.y, n.z))});
+            glm::vec3 norm = glm::normalize(glm::vec3(n.x, n.y, n.z));
+            if (std::isnan(norm.x) || std::isnan(norm.y) || std::isnan(norm.z))
+                throw std::logic_error("Invalid normal: "s + std::to_string(n.x) + ' ' +
+                                       std::to_string(n.y) + ' ' + std::to_string(n.z));
+            vertices.push_back({{v.x, v.y, v.z}, norm});
         }
     }
 
