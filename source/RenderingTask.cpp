@@ -246,11 +246,11 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         return {0, 0, 0};
 
     glm::vec3 color = mat->ke;
-    if (color.r != 0.f || color.g != 0.f || color.b != 0.f)
+    if (color.r > 0.f || color.g > 0.f || color.b > 0.f && maxDepth == recLvl)
         return color;
 
     // sample random incoming vector
-    auto [s, prob] = sampler();
+    auto [s, prob] = sampler(mat);
     if (prob == 0.f)
         return color;
     glm::vec3 hit = r.o + t * r.d;
@@ -264,14 +264,18 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         const Triangle &light = triangles.at(lightIdx);
         float alpha = uniDist(randEng);
         float beta = 1.f - alpha;
-        glm::vec3 randLightPoint =
-            alpha * (vertices.at(light.indices[1]).pos - vertices.at(light.indices[0]).pos) +
-            beta * (vertices.at(light.indices[2]).pos - vertices.at(light.indices[0]).pos);
+        const Vertex &lA = vertices.at(light.indices[0]);
+        const Vertex &lB = vertices.at(light.indices[1]);
+        const Vertex &lC = vertices.at(light.indices[2]);
+        glm::vec3 randLightPoint = lA.pos + alpha * (lB.pos - lA.pos) + beta * (lC.pos - lA.pos);
         Ray lightRay(hit, glm::normalize(randLightPoint - hit));
+        glm::vec3 lightNorm =
+            glm::normalize(lA.norm + alpha * (lB.norm - lA.norm) + beta * (lC.norm - lA.norm));
         if (!isObstructed(lightRay, randLightPoint))
-            color += mats.at(trianglesToMatIndices.at(lightIdx)).ke *
-                     brdf(lightRay.d, -r.d, n, *mat) * glm::abs(glm::dot(n, lightRay.d)) *
-                     float(lightIndices.size());
+            color += mats.at(trianglesToMatIndices.at(lightIdx)).ke * light.area(vertices) *
+                     brdf(lightRay.d, -r.d, n, *mat) *
+                     glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
+                     float(lightIndices.size()) / glm::distance2(hit, randLightPoint);
     }
 
     float russianRouletteAlpha =

@@ -9,7 +9,7 @@ glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, con
     float thetaI = glm::acos(glm::dot(incoming, n)), thetaH = glm::acos(glm::dot(half, n)),
           thetaO = glm::acos(glm::dot(outgoing, n)), beta = glm::acos(glm::dot(half, outgoing));
     return mat.kd * glm::one_over_pi<float>() +
-           mat.ks * fresnel(beta, mat.ni) * beckmannDist(thetaH, .5f) *
+           mat.ks * fresnel(beta, mat.ni) * beckmannDist(thetaH, mat.roughness) *
                geometryMaskingAndShadowing(thetaH, thetaI, thetaO, beta) /
                (glm::pi<float>() * glm::cos(thetaI) * glm::cos(thetaO));
 }

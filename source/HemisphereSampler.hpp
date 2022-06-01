@@ -3,14 +3,16 @@
 #include <glm/glm.hpp>
 #include <random>
 
+#include "Material.hpp"
+
 class HemisphereSampler {
 public:
     static glm::vec3 makeSampleRelativeToNormal(const glm::vec3 &s, const glm::vec3 &n);
 
-    std::tuple<glm::vec3, float> operator()();
-    std::tuple<glm::vec3, float> operator()(const glm::vec3 &n);
-    virtual glm::vec3 sample() = 0;
-    virtual float pdf(const glm::vec3 &v) const = 0;
+    std::tuple<glm::vec3, float> operator()(const Material *mat = nullptr);
+    std::tuple<glm::vec3, float> operator()(const glm::vec3 &n, const Material *mat = nullptr);
+    virtual glm::vec3 sample(const Material *mat = nullptr) = 0;
+    virtual float pdf(const glm::vec3 &v, const Material *mat = nullptr) const = 0;
 };
 
 class RandomHemisphereSampler : public HemisphereSampler {
@@ -23,8 +25,8 @@ protected:
 
 class CosineSampler : public RandomHemisphereSampler {
 public:
-    glm::vec3 sample() override;
-    float pdf(const glm::vec3 &v) const override;
+    glm::vec3 sample(const Material *mat = nullptr) override;
+    float pdf(const glm::vec3 &v, const Material *mat = nullptr) const override;
 
 private:
     std::uniform_real_distribution<float> dist;
@@ -32,8 +34,8 @@ private:
 
 class BeckmannSampler : public RandomHemisphereSampler {
 public:
-    glm::vec3 sample() override;
-    float pdf(const glm::vec3 &v) const override;
+    glm::vec3 sample(const Material *mat = nullptr) override;
+    float pdf(const glm::vec3 &v, const Material *mat = nullptr) const override;
 
 private:
     std::uniform_real_distribution<float> dist;
@@ -41,8 +43,8 @@ private:
 
 class UniformSampler : public RandomHemisphereSampler {
 public:
-    glm::vec3 sample() override;
-    float pdf(const glm::vec3 &v) const override;
+    glm::vec3 sample(const Material *mat = nullptr) override;
+    float pdf(const glm::vec3 &v, const Material *mat = nullptr) const override;
 
 private:
     std::uniform_real_distribution<float> dist;
