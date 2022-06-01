@@ -101,6 +101,7 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
     for (int i = 0; i < scene->mNumMaterials; i++)
         mats.emplace_back(scene->mMaterials[i]);
 
+    bool foundIncorrectNormals = false;
     for (int i = 0; i < scene->mNumMeshes; i++) {
         aiMesh *mesh = scene->mMeshes[i];
 
@@ -120,11 +121,12 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
             aiVector3D n = mesh->mNormals[i];
             glm::vec3 norm = glm::normalize(glm::vec3(n.x, n.y, n.z));
             if (std::isnan(norm.x) || std::isnan(norm.y) || std::isnan(norm.z))
-                throw std::logic_error("Invalid normal: "s + std::to_string(n.x) + ' ' +
-                                       std::to_string(n.y) + ' ' + std::to_string(n.z));
+                foundIncorrectNormals = true;
             vertices.push_back({{v.x, v.y, v.z}, norm});
         }
     }
+    if (foundIncorrectNormals)
+        std::cerr << "Some normals are incorrect: zero or nan.\n";
 
     for (unsigned int tIdx = 0; tIdx < triangles.size(); tIdx++) {
         glm::vec3 ke = mats.at(trianglesToMatIndices.at(tIdx)).ke;
