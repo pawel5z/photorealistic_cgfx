@@ -156,9 +156,19 @@ void RenderingTask::render() const {
         unsigned int progressSoFar = 0;
         for (const auto &counter : progress)
             progressSoFar += counter.counter;
-        std::cerr
-            << "\r" << progressSoFar * 100 / (width * height)
-            << "%                                                                                ";
+        float elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                            std::chrono::steady_clock::now() - begin)
+                            .count();
+        float left = float(width * height - progressSoFar) * elapsed / float(progressSoFar);
+        int elapsedMin = int(elapsed) / 60;
+        int elapsedSec = int(elapsed) % 60;
+        int leftMin = int(left) / 60;
+        int leftSec = int(left) % 60;
+        std::cerr << "\rprogress: " << progressSoFar * 100 / (width * height) << std::setfill('0')
+                  << "%, time elapsed: " << elapsedMin << ":" << std::setw(2) << elapsedSec
+                  << ", est. time left: " << leftMin << ":" << std::setw(2) << leftSec
+                  << "                                                               "
+                     "                 ";
         if (progressSoFar == width * height)
             break;
         std::this_thread::sleep_for(1s);
