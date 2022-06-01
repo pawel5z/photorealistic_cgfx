@@ -28,4 +28,7 @@ Material::Material(aiMaterial *mat) {
     if (AI_SUCCESS != mat->Get(AI_MATKEY_COLOR_EMISSIVE, col))
         throw std::logic_error("Could not get emissive color.");
     ke = {col.r, col.g, col.b};
+
+    // https://floyd.lbl.gov/mgf/mgfhtml/stanprac.html
+    roughness = glm::sqrt(2.f / ns);
 }
