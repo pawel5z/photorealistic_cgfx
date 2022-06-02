@@ -272,7 +272,7 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
     glm::vec3 color(0);
     if (mat->ke.r > 0.f || mat->ke.g > 0.f || mat->ke.b > 0.f) {
         if (maxDepth == recLvl)
-            color = mat->ke;
+            color = mat->ke / glm::pi<float>();
         return color;
     }
 
