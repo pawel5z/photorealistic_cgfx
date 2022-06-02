@@ -269,9 +269,12 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
     if (maxDepth == 0 || !findNearestIntersection(r, t, n, &mat))
         return {0, 0, 0};
 
-    glm::vec3 color = mat->ke;
-    if (color.r > 0.f || color.g > 0.f || color.b > 0.f && maxDepth == recLvl)
+    glm::vec3 color(0);
+    if (mat->ke.r > 0.f || mat->ke.g > 0.f || mat->ke.b > 0.f) {
+        if (maxDepth == recLvl)
+            color = mat->ke;
         return color;
+    }
 
     // sample random incoming vector
     auto [s, prob] = sampler(mat);
