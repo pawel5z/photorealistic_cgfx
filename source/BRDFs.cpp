@@ -30,3 +30,12 @@ float fresnel(float beta, float refrIdx) {
     float f0 = glm::pow((1.f - refrIdx) / (1.f + refrIdx), 2.f);
     return f0 + (1 - f0) * glm::pow(1 - glm::cos(beta), 5.f);
 }
+
+glm::vec3 phongModified(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
+                        const Material &mat) {
+    return mat.kd / glm::pi<float>() +
+           mat.ks * (mat.ns + 2.f) *
+               glm::pow(glm::clamp(glm::dot(outgoing, glm::reflect(-incoming, n)), 0.f, 1.f),
+                        mat.ns) *
+               glm::one_over_two_pi<float>();
+}
