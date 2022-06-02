@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <queue>
 #include <random>
 #include <string>
 #include <thread>
@@ -96,8 +97,8 @@ private:
                        HemisphereSampler &sampler) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const glm::vec3 &point) const;
-    void renderBatch(std::vector<std::vector<glm::vec3>> &pixels, const unsigned int from,
-                     const unsigned int count, CacheAlignedCounter &progress,
+    void renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
+                     std::queue<unsigned int> &&flatCoordsQueue, CacheAlignedCounter &progress,
                      std::chrono::steady_clock::time_point &ts, std::mutex &tsLock) const;
     void recomputeCameraParams();
 };

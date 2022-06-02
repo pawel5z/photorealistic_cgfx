@@ -141,14 +141,28 @@ void RenderingTask::render() const {
     std::vector<std::vector<glm::vec3>> pixels(height, std::vector<glm::vec3>(width, glm::vec3(0)));
     std::vector<CacheAlignedCounter> progress(concThreads);
     std::vector<std::thread> ts;
-    unsigned int minBatchSize = width * height / concThreads;
+
+    /* Distribute pixels randomly between threads in order to make each thread
+     * work on average the same amount of time. */
+    std::unique_ptr<std::vector<unsigned int>> flatCoords(
+        new std::vector<unsigned int>(width * height, 0u));
+    std::iota(flatCoords->begin(), flatCoords->end(), 0u);
+    std::shuffle(flatCoords->begin(), flatCoords->end(), std::mt19937((std::random_device())()));
+    std::vector<std::queue<unsigned int>> flatCoordsQueues(concThreads, std::queue<unsigned int>());
+    for (unsigned int i = 0; i != flatCoords->size();)
+        for (unsigned int j = 0; j < concThreads && i != flatCoords->size(); j++) {
+            flatCoordsQueues.at(j).push(flatCoords->at(i));
+            i++;
+        }
+    flatCoords.reset();
+
+    std::mutex endLock;
     auto begin = std::chrono::steady_clock::now();
     auto end = begin;
-    std::mutex endLock;
     for (unsigned int i = 0; i < concThreads; i++)
-        ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(pixels), i * minBatchSize,
-                        i != concThreads - 1 ? minBatchSize : width * height - i * minBatchSize,
-                        std::ref(progress.at(i)), std::ref(end), std::ref(endLock));
+        ts.emplace_back(&RenderingTask::renderBatch, this, std::ref(pixels),
+                        std::move(flatCoordsQueues.at(i)), std::ref(progress.at(i)), std::ref(end),
+                        std::ref(endLock));
     std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
               << "...\n";
     std::this_thread::yield();
@@ -316,7 +330,7 @@ bool RenderingTask::isObstructed(const Ray &r, const glm::vec3 &point) const {
 }
 
 void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
-                                const unsigned int from, const unsigned int count,
+                                std::queue<unsigned int> &&flatCoordsQueue,
                                 CacheAlignedCounter &progress,
                                 std::chrono::steady_clock::time_point &ts,
                                 std::mutex &tsLock) const {
@@ -326,8 +340,11 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
     std::mt19937 randEng((std::random_device())());
 #endif // DEBUG
     CosineSampler sampler;
-    for (unsigned int p = from; p < from + count; p++) {
+
+    while (!flatCoordsQueue.empty()) {
+        const auto p = flatCoordsQueue.front();
         unsigned int px = p % width, py = p / width;
+        flatCoordsQueue.pop();
         glm::vec3 pixel(0);
         for (unsigned int i = 0; i < nSamples; i++) {
             pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, cookTorrance, sampler);
