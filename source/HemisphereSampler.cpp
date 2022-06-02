@@ -11,7 +11,7 @@ glm::vec3 HemisphereSampler::makeSampleRelativeToNormal(const glm::vec3 &s, cons
 
 std::tuple<glm::vec3, float> HemisphereSampler::operator()(const Material *mat) {
     glm::vec3 s = sample(mat);
-    return std::make_tuple(s, pdf(s));
+    return std::make_tuple(s, pdf(s, mat));
 }
 
 std::tuple<glm::vec3, float> HemisphereSampler::operator()(const glm::vec3 &n,
