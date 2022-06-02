@@ -6,12 +6,12 @@
 glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
                        const Material &mat) {
     glm::vec3 half = glm::normalize(incoming + outgoing);
-    float thetaI = glm::acos(glm::dot(incoming, n)), thetaH = glm::acos(glm::dot(half, n)),
-          thetaO = glm::acos(glm::dot(outgoing, n)), beta = glm::acos(glm::dot(half, outgoing));
+    float cosThetaI = glm::dot(incoming, n), thetaH = glm::acos(glm::dot(half, n)),
+          cosThetaO = glm::dot(outgoing, n), cosBeta = glm::dot(half, outgoing);
     return mat.kd * glm::one_over_pi<float>() +
-           mat.ks * fresnel(beta, mat.ni) * beckmannDist(thetaH, mat.roughness) *
-               geometryMaskingAndShadowing(thetaH, thetaI, thetaO, beta) /
-               (glm::pi<float>() * glm::cos(thetaI) * glm::cos(thetaO));
+           mat.ks * fresnel(cosBeta, mat.ni) * beckmannDist(thetaH, mat.roughness) *
+               geometryMaskingAndShadowing(thetaH, cosThetaI, cosThetaO, cosBeta) /
+               (glm::pi<float>() * cosThetaI * cosThetaO);
 }
 
 float beckmannDist(float thetaH, float roughness) {
@@ -20,15 +20,15 @@ float beckmannDist(float thetaH, float roughness) {
            (sqRoughness * glm::pow(glm::cos(thetaH), 4.f));
 }
 
-float geometryMaskingAndShadowing(float thetaH, float thetaI, float thetaO, float beta) {
-    float twoCosThetaHOverCosBeta = 2.f * glm::cos(thetaH) / glm::cos(beta);
-    return std::min({1.f, twoCosThetaHOverCosBeta * glm::cos(thetaI),
-                     twoCosThetaHOverCosBeta * glm::cos(thetaO)});
+float geometryMaskingAndShadowing(float thetaH, float cosThetaI, float cosThetaO, float cosBeta) {
+    float twoCosThetaHOverCosBeta = 2.f * glm::cos(thetaH) / cosBeta;
+    return std::min(
+        {1.f, twoCosThetaHOverCosBeta * cosThetaI, twoCosThetaHOverCosBeta * cosThetaO});
 }
 
-float fresnel(float beta, float refrIdx) {
+float fresnel(float cosBeta, float refrIdx) {
     float f0 = glm::pow((1.f - refrIdx) / (1.f + refrIdx), 2.f);
-    return f0 + (1 - f0) * glm::pow(1 - glm::cos(beta), 5.f);
+    return f0 + (1 - f0) * glm::pow(1 - cosBeta, 5.f);
 }
 
 glm::vec3 phongModified(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
