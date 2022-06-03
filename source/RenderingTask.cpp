@@ -139,8 +139,7 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
         const Material &mat = mats.at(trianglesToMatIndices.at(lightTrianIdx));
         float power =
             (mat.ke.r + mat.ke.g + mat.ke.b) * triangles.at(lightTrianIdx).area(vertices) / 3.f;
-        lightPowersCdf.push_back(power ? lightPowersCdf.size() == 0
-                                       : power + lightPowersCdf.back());
+        lightPowersCdf.push_back(lightPowersCdf.size() ? power + lightPowersCdf.back() : power);
         lightPowersCombined += power;
     }
 
