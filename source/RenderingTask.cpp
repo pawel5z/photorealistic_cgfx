@@ -134,6 +134,16 @@ RenderingTask::RenderingTask(std::string rtcPath, unsigned int nSamples, unsigne
             lightIndices.push_back(tIdx);
     }
 
+    lightPowersCombined = 0.f;
+    for (unsigned int lightTrianIdx : lightIndices) {
+        const Material &mat = mats.at(trianglesToMatIndices.at(lightTrianIdx));
+        float power =
+            (mat.ke.r + mat.ke.g + mat.ke.b) * triangles.at(lightTrianIdx).area(vertices) / 3.f;
+        lightPowersCdf.push_back(power ? lightPowersCdf.size() == 0
+                                       : power + lightPowersCdf.back());
+        lightPowersCombined += power;
+    }
+
     std::cerr << triangles.size() << " triangles\n";
 }
 
@@ -282,12 +292,12 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         return color;
     glm::vec3 hit = r.o + t * r.d;
 
+    static thread_local std::uniform_real_distribution<float> lightPowersDist(0.f,
+                                                                              lightPowersCombined);
     static thread_local std::uniform_real_distribution<float> uniDist;
     // sample random light if possible
     if (lightIndices.size() != 0) {
-        static thread_local std::uniform_int_distribution<unsigned int> lightIdxDist(
-            0, lightIndices.size() - 1);
-        unsigned int lightIdx = lightIndices.at(lightIdxDist(randEng));
+        unsigned int lightIdx = getLightIdxFromRndVal(lightPowersDist(randEng));
         const Triangle &light = triangles.at(lightIdx);
         float alpha = uniDist(randEng);
         float beta = 1.f - alpha;
@@ -298,11 +308,15 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         Ray lightRay(hit, glm::normalize(randLightPoint - hit));
         glm::vec3 lightNorm =
             glm::normalize(lA.norm + alpha * (lB.norm - lA.norm) + beta * (lC.norm - lA.norm));
-        if (!isObstructed(lightRay, randLightPoint))
-            color += mats.at(trianglesToMatIndices.at(lightIdx)).ke * light.area(vertices) *
-                     brdf(lightRay.d, -r.d, n, *mat) *
-                     glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
-                     float(lightIndices.size()) / glm::distance2(hit, randLightPoint);
+        if (!isObstructed(lightRay, randLightPoint)) {
+            const Material &lightMat = mats.at(trianglesToMatIndices.at(lightIdx));
+            color +=
+                lightMat.ke * light.area(vertices) * brdf(lightRay.d, -r.d, n, *mat) *
+                glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
+                lightPowersCombined /
+                (light.area(vertices) * (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) / 3.f) /
+                glm::distance2(hit, randLightPoint);
+        }
     }
 
     float russianRouletteAlpha =
@@ -370,4 +384,21 @@ void RenderingTask::recomputeCameraParams() {
     right = glm::normalize(glm::cross(front, up));
     up = glm::normalize(glm::cross(right, front)) * yView / 2.f;
     right *= (float)width * yView / (float)height / 2.f;
+}
+
+unsigned int RenderingTask::getLightIdxFromRndVal(const float rnd) const {
+    return getLightIdxFromRndVal(rnd, 0, lightIndices.size() - 1);
+}
+
+unsigned int RenderingTask::getLightIdxFromRndVal(const float rnd, const unsigned int begin,
+                                                  const unsigned int end) const {
+    if (begin > end)
+        throw std::invalid_argument("Empty search interval.");
+    if (begin == end)
+        return lightIndices.at(begin);
+    const unsigned int mid = (begin + end) / 2;
+    if (rnd <= lightPowersCdf.at(mid))
+        return getLightIdxFromRndVal(rnd, begin, mid);
+    else
+        return getLightIdxFromRndVal(rnd, mid + 1, end);
 }

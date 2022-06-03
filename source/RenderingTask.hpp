@@ -80,9 +80,12 @@ private:
      * This cannot be kept in Triangle struct, because Triangle structs are passed to element
      * buffer in OpenGL. */
     std::vector<unsigned int> trianglesToMatIndices;
-    /* Stores indices to triangles vector that have non-zero emission. */
-    std::vector<unsigned int> lightIndices;
     std::unique_ptr<KDTree> kdTree;
+    /* lightIndices stores indices to triangles vector that have non-zero emission.
+     * lightIndices and lightPowersCdf are of equal sizes. */
+    std::vector<unsigned int> lightIndices;
+    std::vector<float> lightPowersCdf;
+    float lightPowersCombined;
     unsigned int concThreads;
     unsigned int nSamples;
 
@@ -101,6 +104,9 @@ private:
                      std::queue<unsigned int> &&flatCoordsQueue, CacheAlignedCounter &progress,
                      std::chrono::steady_clock::time_point &ts, std::mutex &tsLock) const;
     void recomputeCameraParams();
+    unsigned int getLightIdxFromRndVal(const float rnd) const;
+    unsigned int getLightIdxFromRndVal(const float rnd, const unsigned int begin,
+                                       const unsigned int end) const;
 };
 
 #endif // RENDERING_TASK_HPP
