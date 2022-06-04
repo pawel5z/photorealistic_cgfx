@@ -115,3 +115,9 @@ std::ostream &operator<<(std::ostream &os, const glm::vec3 &v) {
     os << v[0] << ' ' << v[1] << ' ' << v[2] << ' ' << glm::length(v);
     return os;
 }
+
+// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling
+float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+    float f = nf * fPdf, g = ng * gPdf;
+    return (f * f) / (f * f + g * g);
+}

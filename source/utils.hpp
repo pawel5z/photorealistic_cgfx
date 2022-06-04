@@ -20,7 +20,8 @@ int compileProgramFromFile(GLuint &pId, const char *vs, const char *fs, const ch
  * AGL3:  GL/GLFW init AGLWindow and AGLDrawable class definitions
  * Ver.3  14.I.2020 (c) A. Łukaszewski
  */
-
 std::ostream &operator<<(std::ostream &os, const glm::vec3 &v);
+// https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/Importance_Sampling
+float powerHeuristic(int nf, float fPdf, int ng, float gPdf);
 
 #endif // UTILS_HPP
