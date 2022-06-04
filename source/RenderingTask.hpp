@@ -97,7 +97,7 @@ private:
     glm::vec3 traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
                        const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
                                                      const glm::vec3 &, const Material &)> &brdf,
-                       HemisphereSampler &sampler) const;
+                       HemisphereSampler &sampler1, HemisphereSampler &sampler2) const;
     bool findNearestIntersection(const Ray &r, float &t, glm::vec3 &n, const Material **mat) const;
     bool isObstructed(const Ray &r, const glm::vec3 &point) const;
     void renderBatch(std::vector<std::vector<glm::vec3>> &pixels,

@@ -271,7 +271,7 @@ glm::vec3
 RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randEng,
                         const std::function<glm::vec3(const glm::vec3 &, const glm::vec3 &,
                                                       const glm::vec3 &, const Material &)> &brdf,
-                        HemisphereSampler &sampler) const {
+                        HemisphereSampler &sampler1, HemisphereSampler &sampler2) const {
     float t;
     glm::vec3 n;
     const Material *mat;
@@ -285,12 +285,7 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         return color;
     }
 
-    // sample random incoming vector
-    auto [s, prob] = sampler(mat);
-    if (prob == 0.f)
-        return color;
     glm::vec3 hit = r.o + t * r.d;
-
     static thread_local std::uniform_real_distribution<float> lightPowersDist(0.f,
                                                                               lightPowersCombined);
     static thread_local std::uniform_real_distribution<float> uniDist;
@@ -321,10 +316,20 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
     float russianRouletteAlpha =
         (mat->kd.r + mat->kd.g + mat->kd.b + mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
     if (uniDist(randEng) <= russianRouletteAlpha) {
-        Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
-        color += brdf(incoming.d, -r.d, n, *mat) *
-                 traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
-                 glm::abs(glm::dot(n, incoming.d)) / (prob * russianRouletteAlpha);
+        // sample two random incoming vectors
+        auto [s1, prob1] = sampler1(mat);
+        auto [s2, prob2] = sampler2(mat);
+        Ray incoming1(hit, sampler1.makeSampleRelativeToNormal(s1, n));
+        Ray incoming2(hit, sampler2.makeSampleRelativeToNormal(s2, n));
+        float w1 = powerHeuristic(1.f, prob1, 1.f, prob2);
+        float w2 = powerHeuristic(1.f, prob2, 1.f, prob1);
+        color += (brdf(incoming1.d, -r.d, n, *mat) *
+                      traceRay(incoming1, maxDepth - 1, randEng, brdf, sampler1, sampler2) *
+                      glm::abs(glm::dot(n, incoming1.d)) * w1 / (prob1) +
+                  brdf(incoming2.d, -r.d, n, *mat) *
+                      traceRay(incoming2, maxDepth - 1, randEng, brdf, sampler1, sampler2) *
+                      glm::abs(glm::dot(n, incoming2.d)) * w2 / (prob2)) /
+                 russianRouletteAlpha;
     }
 
     return color;
@@ -355,7 +360,8 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
 #else
     std::mt19937 randEng((std::random_device())());
 #endif // DEBUG
-    CosineSampler sampler;
+    CosineSampler sampler1;
+    UniformSampler sampler2;
 
     while (!flatCoordsQueue.empty()) {
         const auto p = flatCoordsQueue.front();
@@ -363,7 +369,8 @@ void RenderingTask::renderBatch(std::vector<std::vector<glm::vec3>> &pixels,
         flatCoordsQueue.pop();
         glm::vec3 pixel(0);
         for (unsigned int i = 0; i < nSamples; i++) {
-            pixel += traceRay(getPrimaryRay(px, py), recLvl, randEng, cookTorrance, sampler);
+            pixel +=
+                traceRay(getPrimaryRay(px, py), recLvl, randEng, cookTorrance, sampler1, sampler2);
         }
         pixels.at(py).at(px) = pixel / float(nSamples);
         progress.counter++;
