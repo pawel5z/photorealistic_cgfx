@@ -7,20 +7,18 @@
 #include "utils.hpp"
 
 static void printSamplerResults(HemisphereSampler &&sampler) {
-    std::cout << "CosineSampler" << '\n';
     for (int i = 0; i < 5; i++) {
         auto [v, p] = sampler();
-        std::cout << v << '\n';
+        std::cout << v << ' ' << p << '\n';
     }
 }
 
 int main() {
+    std::cout << "CosineSampler" << '\n';
     printSamplerResults(CosineSampler());
     std::cout << '\n';
 
-    printSamplerResults(BeckmannSampler());
-    std::cout << '\n';
-
+    std::cout << "UniformSampler" << '\n';
     printSamplerResults(UniformSampler());
     std::cout << '\n';
 
