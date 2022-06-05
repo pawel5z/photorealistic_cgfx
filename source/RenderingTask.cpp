@@ -343,6 +343,14 @@ bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n
     return ret;
 }
 
+bool RenderingTask::findNearestIntersection(const Ray &r, float &t, glm::vec3 &n,
+                                            const Material **mat, unsigned int &trianIdx) const {
+    bool ret = kdTree->findNearestIntersection(Ray(r), triangles, vertices, t, n, trianIdx);
+    if (ret)
+        *mat = &mats.at(trianglesToMatIndices.at(trianIdx));
+    return ret;
+}
+
 bool RenderingTask::isObstructed(const Ray &r, const glm::vec3 &point) const {
     glm::vec3 tVec = (point - r.o) / r.d;
     float target = std::max({tVec.x, tVec.y, tVec.z});
