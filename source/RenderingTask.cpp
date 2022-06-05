@@ -289,42 +289,77 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         return color;
     }
 
-    // sample random incoming vector
-    auto [s, prob] = sampler(mat);
-    if (prob == 0.f)
-        return color;
     glm::vec3 hit = r.o + t * r.d;
-
     static thread_local std::uniform_real_distribution<float> lightPowersDist(0.f,
                                                                               lightPowersCombined);
     static thread_local std::uniform_real_distribution<float> uniDist;
-    // sample random light if possible
+    // sample lights if possible
     if (lightIndices.size() != 0) {
-        unsigned int lightIdx = getLightIdxFromRndVal(lightPowersDist(randEng));
-        const Triangle &light = triangles.at(lightIdx);
+        // sample random light
+        unsigned int randLightIdx = getLightIdxFromRndVal(lightPowersDist(randEng));
+        const Triangle &randLight = triangles.at(randLightIdx);
         float alpha = uniDist(randEng);
         float beta = 1.f - alpha;
-        const Vertex &lA = vertices.at(light.indices[0]);
-        const Vertex &lB = vertices.at(light.indices[1]);
-        const Vertex &lC = vertices.at(light.indices[2]);
+        const Vertex &lA = vertices.at(randLight.indices[0]);
+        const Vertex &lB = vertices.at(randLight.indices[1]);
+        const Vertex &lC = vertices.at(randLight.indices[2]);
         glm::vec3 randLightPoint = lA.pos + alpha * (lB.pos - lA.pos) + beta * (lC.pos - lA.pos);
-        Ray lightRay(hit, glm::normalize(randLightPoint - hit));
-        glm::vec3 lightNorm =
+        Ray randLightRay(hit, glm::normalize(randLightPoint - hit));
+        glm::vec3 randLightNorm =
             glm::normalize(lA.norm + alpha * (lB.norm - lA.norm) + beta * (lC.norm - lA.norm));
-        if (!isObstructed(lightRay, randLightPoint)) {
-            const Material &lightMat = mats.at(trianglesToMatIndices.at(lightIdx));
+        float probRandLight = 0.f;
+        const Material &lightMat = mats.at(trianglesToMatIndices.at(randLightIdx));
+        float sqDistToRandLight = glm::distance2(hit, randLightPoint);
+        if (!isObstructed(randLightRay, randLightPoint) && sqDistToRandLight > minLightSqDist)
+            probRandLight = randLight.area(vertices) *
+                            (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) /
+                            (3.f * lightPowersCombined);
+
+        // sample light based on random ray
+        auto [sLightFromDir, probLightFromDir] = sampler(mat);
+        Ray incomingLightFromDir(hit, sampler.makeSampleRelativeToNormal(sLightFromDir, n));
+        float tLightFromDir;
+        glm::vec3 nLightFromDir;
+        const Material *matLightFromDir;
+        unsigned int lightFromDirIdx;
+        float sqDistToLightFromDir;
+        if (!findNearestIntersection(incomingLightFromDir, tLightFromDir, nLightFromDir,
+                                     &matLightFromDir, lightFromDirIdx) ||
+            lightFromDirIdx == randLightIdx ||
+            (matLightFromDir->ke.r <= 0.f && matLightFromDir->ke.g <= 0.f &&
+             matLightFromDir->ke.b <= 0.f))
+            probLightFromDir = 0.f;
+        else
+            sqDistToLightFromDir =
+                glm::distance2(hit, hit + incomingLightFromDir.d * tLightFromDir);
+        if (sqDistToLightFromDir <= minLightSqDist)
+            probLightFromDir = 0.f;
+
+        float wRandLight = powerHeuristic(1.f, probRandLight, 1.f, probLightFromDir);
+        float wLightFromDir = powerHeuristic(1.f, probLightFromDir, 1.f, probRandLight);
+
+        if (probRandLight > std::numeric_limits<float>::epsilon())
             color +=
-                lightMat.ke * light.area(vertices) * brdf(lightRay.d, -r.d, n, *mat) *
-                glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
-                lightPowersCombined /
-                (light.area(vertices) * (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) / 3.f) /
-                glm::distance2(hit, randLightPoint);
+                lightMat.ke * randLight.area(vertices) * brdf(randLightRay.d, -r.d, n, *mat) *
+                glm::abs(glm::dot(n, randLightRay.d) * glm::dot(randLightNorm, -randLightRay.d)) /
+                sqDistToRandLight * wRandLight / probRandLight;
+
+        if (probLightFromDir > std::numeric_limits<float>::epsilon()) {
+            color += matLightFromDir->ke * triangles.at(lightFromDirIdx).area(vertices) *
+                     brdf(incomingLightFromDir.d, -r.d, n, *mat) *
+                     glm::abs(glm::dot(n, incomingLightFromDir.d) *
+                              glm::dot(nLightFromDir, -incomingLightFromDir.d)) /
+                     sqDistToLightFromDir * wLightFromDir / probLightFromDir;
         }
     }
 
     float russianRouletteAlpha =
         (mat->kd.r + mat->kd.g + mat->kd.b + mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
     if (uniDist(randEng) <= russianRouletteAlpha) {
+        // sample random incoming vector
+        auto [s, prob] = sampler(mat);
+        if (prob <= std::numeric_limits<float>::epsilon())
+            return color;
         Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
         color += brdf(incoming.d, -r.d, n, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
