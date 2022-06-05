@@ -22,7 +22,15 @@ std::tuple<glm::vec3, float> HemisphereSampler::operator()(const glm::vec3 &n,
 
 // abstract random hemisphere sampler
 
-RandomHemisphereSampler::RandomHemisphereSampler() : randEng(std::random_device()()) {}
+RandomHemisphereSampler::RandomHemisphereSampler()
+    :
+#ifdef DEBUG
+      randEng(42)
+#else
+      randEng(std::random_device()())
+#endif // DEBUG
+{
+}
 
 // cosine sampler
 
