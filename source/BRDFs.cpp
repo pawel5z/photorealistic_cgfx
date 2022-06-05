@@ -15,9 +15,8 @@ glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, con
 }
 
 float beckmannDist(float thetaH, float roughness) {
-    float sqRoughness = roughness * roughness;
-    return glm::exp(-glm::pow(glm::tan(thetaH), 2.f) / sqRoughness) /
-           (sqRoughness * glm::pow(glm::cos(thetaH), 4.f));
+    return glm::exp(-glm::pow(glm::tan(thetaH) / roughness, 2.f)) /
+           (roughness * roughness * glm::pow(glm::cos(thetaH), 4.f));
 }
 
 float geometryMaskingAndShadowing(float thetaH, float cosThetaI, float cosThetaO, float cosBeta) {
