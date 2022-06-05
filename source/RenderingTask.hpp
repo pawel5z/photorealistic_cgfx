@@ -36,6 +36,7 @@ public:
 
 class RenderingTask {
 public:
+    static constexpr float minLightSqDist = .01f;
     std::string rtcPath;
     // given in rtc file
     std::string origObjPath;

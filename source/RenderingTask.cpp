@@ -311,14 +311,15 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         Ray lightRay(hit, glm::normalize(randLightPoint - hit));
         glm::vec3 lightNorm =
             glm::normalize(lA.norm + alpha * (lB.norm - lA.norm) + beta * (lC.norm - lA.norm));
-        if (!isObstructed(lightRay, randLightPoint)) {
+        float lightSqDist = glm::distance2(hit, randLightPoint);
+        if (!isObstructed(lightRay, randLightPoint) && lightSqDist > minLightSqDist) {
             const Material &lightMat = mats.at(trianglesToMatIndices.at(lightIdx));
             color +=
                 lightMat.ke * light.area(vertices) * brdf(lightRay.d, -r.d, n, *mat) *
                 glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
                 lightPowersCombined /
                 (light.area(vertices) * (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) / 3.f) /
-                glm::distance2(hit, randLightPoint);
+                lightSqDist;
         }
     }
 
