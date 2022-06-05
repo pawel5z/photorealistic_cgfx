@@ -35,7 +35,7 @@ glm::vec3 CosineSampler::sample(const Material *mat) {
 }
 
 float CosineSampler::pdf(const glm::vec3 &v, const Material *mat) const {
-    return v.y / glm::pi<float>();
+    return v.y * glm::one_over_pi<float>();
 }
 
 // Beckmann sampler
