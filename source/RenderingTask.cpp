@@ -156,7 +156,11 @@ void RenderingTask::render() const {
     std::unique_ptr<std::vector<unsigned int>> flatCoords(
         new std::vector<unsigned int>(width * height, 0u));
     std::iota(flatCoords->begin(), flatCoords->end(), 0u);
+#ifdef DEBUG
+    std::shuffle(flatCoords->begin(), flatCoords->end(), std::mt19937(42));
+#else
     std::shuffle(flatCoords->begin(), flatCoords->end(), std::mt19937((std::random_device())()));
+#endif // DEBUG
     std::vector<std::queue<unsigned int>> flatCoordsQueues(concThreads, std::queue<unsigned int>());
     for (unsigned int i = 0; i != flatCoords->size();)
         for (unsigned int j = 0; j < concThreads && i != flatCoords->size(); j++) {
