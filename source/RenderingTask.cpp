@@ -289,12 +289,7 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         return color;
     }
 
-    // sample random incoming vector
-    auto [s, prob] = sampler(mat);
-    if (prob == 0.f)
-        return color;
     glm::vec3 hit = r.o + t * r.d;
-
     static thread_local std::uniform_real_distribution<float> lightPowersDist(0.f,
                                                                               lightPowersCombined);
     static thread_local std::uniform_real_distribution<float> uniDist;
@@ -312,20 +307,25 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         glm::vec3 lightNorm =
             glm::normalize(lA.norm + alpha * (lB.norm - lA.norm) + beta * (lC.norm - lA.norm));
         float lightSqDist = glm::distance2(hit, randLightPoint);
+        float lightArea = light.area(vertices);
         if (!isObstructed(lightRay, randLightPoint) && lightSqDist > minLightSqDist) {
             const Material &lightMat = mats.at(trianglesToMatIndices.at(lightIdx));
-            color +=
-                lightMat.ke * light.area(vertices) * brdf(lightRay.d, -r.d, n, *mat) *
-                glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) *
-                lightPowersCombined /
-                (light.area(vertices) * (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) / 3.f) /
-                lightSqDist;
+            float lightProb = lightArea * (lightMat.ke.r + lightMat.ke.g + lightMat.ke.b) / 3.f /
+                              lightPowersCombined;
+            if (lightProb > .01f)
+                color += lightMat.ke * lightArea * brdf(lightRay.d, -r.d, n, *mat) *
+                         glm::abs(glm::dot(n, lightRay.d) * glm::dot(lightNorm, -lightRay.d)) /
+                         lightProb / lightSqDist;
         }
     }
 
     float russianRouletteAlpha =
         (mat->kd.r + mat->kd.g + mat->kd.b + mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
     if (uniDist(randEng) <= russianRouletteAlpha) {
+        // sample random incoming vector
+        auto [s, prob] = sampler(mat);
+        if (prob < .01f)
+            return color;
         Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
         color += brdf(incoming.d, -r.d, n, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
