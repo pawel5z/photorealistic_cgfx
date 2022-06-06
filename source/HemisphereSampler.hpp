@@ -49,3 +49,12 @@ public:
 private:
     std::uniform_real_distribution<float> dist;
 };
+
+class CosineLobeSampler : public RandomHemisphereSampler {
+public:
+    glm::vec3 sample(const Material *mat = nullptr) override;
+    float pdf(const glm::vec3 &v, const Material *mat = nullptr) const override;
+
+private:
+    std::uniform_real_distribution<float> dist;
+};
