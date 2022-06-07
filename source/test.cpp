@@ -6,9 +6,9 @@
 #include "Mesh.hpp"
 #include "utils.hpp"
 
-static void printSamplerResults(HemisphereSampler &&sampler) {
+static void printSamplerResults(HemisphereSampler &&sampler, const Material *mat = nullptr) {
     for (int i = 0; i < 5; i++) {
-        auto [v, p] = sampler();
+        auto [v, p] = sampler(mat);
         std::cout << v << ' ' << p << '\n';
     }
 }
@@ -20,6 +20,11 @@ int main() {
 
     std::cout << "UniformSampler" << '\n';
     printSamplerResults(UniformSampler());
+    std::cout << '\n';
+
+    Material mockMat = Material(25.f, 0.f, glm::vec3(0), glm::vec3(0), glm::vec3(0), glm::vec3(0));
+    std::cout << "CosineLobeSampler" << '\n';
+    printSamplerResults(CosineLobeSampler(), &mockMat);
     std::cout << '\n';
 
     std::cout << "Sample rotations" << '\n';
