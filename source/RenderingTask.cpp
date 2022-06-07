@@ -324,24 +324,19 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
     float rand = uniDist(randEng);
     static thread_local CosineSampler cosineSampler;
     static thread_local CosineLobeSampler cosineLobeSampler;
-    if (rand < meanDiffuse) {
-        // sample random incoming vector
-        auto [s, prob] = cosineSampler(mat);
-        if (prob < .01f)
-            return color;
-        Ray incoming(hit, cosineSampler.makeSampleRelativeToNormal(s, n));
+    if (rand < meanDiffuse + meanSpecular) {
+        std::tuple<glm::vec3, float> sampleTuple;
+        if (rand < meanDiffuse)
+            sampleTuple = cosineSampler(mat);
+        else
+            sampleTuple = cosineLobeSampler(mat);
+        auto [s, prob] = sampleTuple;
+        Ray incoming(hit, HemisphereSampler::makeSampleRelativeToNormal(s, n));
+        float denom =
+            meanDiffuse * cosineSampler.pdf(s, mat) + meanSpecular * cosineLobeSampler.pdf(s, mat);
         color += brdf(incoming.d, -r.d, n, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
-                 glm::abs(glm::dot(n, incoming.d)) / (prob * meanDiffuse);
-    } else if (rand < meanSpecular) {
-        // sample random incoming vector
-        auto [s, prob] = cosineLobeSampler(mat);
-        if (prob < .01f)
-            return color;
-        Ray incoming(hit, cosineLobeSampler.makeSampleRelativeToNormal(s, n));
-        color += brdf(incoming.d, -r.d, n, *mat) *
-                 traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
-                 glm::abs(glm::dot(n, incoming.d)) / (prob * meanSpecular);
+                 glm::abs(glm::dot(n, incoming.d)) / denom;
     }
 
     return color;
