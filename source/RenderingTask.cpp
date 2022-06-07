@@ -319,17 +319,29 @@ RenderingTask::traceRay(const Ray &r, unsigned int maxDepth, std::mt19937 &randE
         }
     }
 
-    float russianRouletteAlpha =
-        (mat->kd.r + mat->kd.g + mat->kd.b + mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
-    if (uniDist(randEng) <= russianRouletteAlpha) {
+    float meanDiffuse = (mat->kd.r + mat->kd.g + mat->kd.b) / 3.f;
+    float meanSpecular = (mat->ks.r + mat->ks.g + mat->ks.b) / 3.f;
+    float rand = uniDist(randEng);
+    static thread_local CosineSampler cosineSampler;
+    static thread_local CosineLobeSampler cosineLobeSampler;
+    if (rand < meanDiffuse) {
         // sample random incoming vector
-        auto [s, prob] = sampler(mat);
+        auto [s, prob] = cosineSampler(mat);
         if (prob < .01f)
             return color;
-        Ray incoming(hit, sampler.makeSampleRelativeToNormal(s, n));
+        Ray incoming(hit, cosineSampler.makeSampleRelativeToNormal(s, n));
         color += brdf(incoming.d, -r.d, n, *mat) *
                  traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
-                 glm::abs(glm::dot(n, incoming.d)) / (prob * russianRouletteAlpha);
+                 glm::abs(glm::dot(n, incoming.d)) / (prob * meanDiffuse);
+    } else if (rand < meanSpecular) {
+        // sample random incoming vector
+        auto [s, prob] = cosineLobeSampler(mat);
+        if (prob < .01f)
+            return color;
+        Ray incoming(hit, cosineLobeSampler.makeSampleRelativeToNormal(s, n));
+        color += brdf(incoming.d, -r.d, n, *mat) *
+                 traceRay(incoming, maxDepth - 1, randEng, brdf, sampler) *
+                 glm::abs(glm::dot(n, incoming.d)) / (prob * meanSpecular);
     }
 
     return color;
