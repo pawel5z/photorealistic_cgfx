@@ -85,7 +85,7 @@ float UniformSampler::pdf(const glm::vec3 &v, const Material *mat) const {
 // cosine lobe sampler
 
 glm::vec3 CosineLobeSampler::sample(const Material *mat) {
-    float twoPiRand1 = dist(randEng);
+    float twoPiRand1 = glm::two_pi<float>() * dist(randEng);
     float rand2 = dist(randEng);
     float sqrtOfOneSubRand2 = glm::sqrt(1.f - glm::pow(rand2, 2.f / (mat->ns + 1.f)));
     return glm::vec3(glm::cos(twoPiRand1) * sqrtOfOneSubRand2,
@@ -94,5 +94,6 @@ glm::vec3 CosineLobeSampler::sample(const Material *mat) {
 }
 
 float CosineLobeSampler::pdf(const glm::vec3 &v, const Material *mat) const {
-    return (mat->ns + 1.f) * glm::pow(v.y, mat->ns) * glm::one_over_two_pi<float>();
+    return (mat->ns + 1.f) * glm::pow(v.y, mat->ns) * glm::sin(glm::acos(v.y)) *
+           glm::one_over_two_pi<float>();
 }
