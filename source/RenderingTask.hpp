@@ -1,5 +1,4 @@
-#ifndef RENDERING_TASK_HPP
-#define RENDERING_TASK_HPP
+#pragma once
 
 #include <chrono>
 #include <glm/glm.hpp>
@@ -109,5 +108,3 @@ private:
     unsigned int getLightIdxFromRndVal(const float rnd, const unsigned int begin,
                                        const unsigned int end) const;
 };
-
-#endif // RENDERING_TASK_HPP

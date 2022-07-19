@@ -5,8 +5,8 @@
 // ==========================================================================
 // AGLWindow
 //===========================================================================
-#ifndef AGL3WINDOW_HPP
-#define AGL3WINDOW_HPP
+
+#pragma once
 
 // epoxy/gl.h must be included before (or in place of) GL/gl.h
 #include <epoxy/gl.h>
@@ -68,5 +68,3 @@ private:
     static void CallbackScroll(GLFWwindow *window, double xp, double yp);
     static void CallbackMousePos(GLFWwindow *window, double xp, double yp);
 };
-
-#endif // AGL3WINDOW_HPP

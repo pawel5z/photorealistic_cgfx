@@ -1,5 +1,4 @@
-#ifndef BBOX_HPP
-#define BBOX_HPP
+#pragma once
 
 #include <array>
 #include <glm/glm.hpp>
@@ -25,5 +24,3 @@ public:
     void replaceUpper(unsigned int dim, float v);
     float surfaceArea() const;
 };
-
-#endif // !BBOX_HPP

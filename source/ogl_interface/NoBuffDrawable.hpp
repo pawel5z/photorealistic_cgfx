@@ -1,15 +1,14 @@
-#ifndef NOBUFFDRAWABLE_HPP
-#define NOBUFFDRAWABLE_HPP
+#pragma once
 
 #include "Camera.hpp"
 
-#include <vector>
-#include <iostream>
+#include <epoxy/gl.h>
+#include <epoxy/glx.h>
 #include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
-#include <epoxy/gl.h>
-#include <epoxy/glx.h>
+#include <iostream>
+#include <vector>
 
 class NoBuffDrawable {
 public:
@@ -20,5 +19,3 @@ public:
 protected:
     GLuint program = 0;
 };
-
-#endif // NOBUFFDRAWABLE_HPP

@@ -1,5 +1,4 @@
-#ifndef LIGHT_HPP
-#define LIGHT_HPP
+#pragma once
 
 #include <glm/glm.hpp>
 #include <string>
@@ -14,5 +13,3 @@ public:
     Light(std::string spec);
     std::vector<unsigned char> getByteColor() const;
 };
-
-#endif // LIGHT_HPP

@@ -1,5 +1,4 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#pragma once
 
 #include <epoxy/gl.h> // must be included before glm
 
@@ -22,5 +21,3 @@ int compileProgramFromFile(GLuint &pId, const char *vs, const char *fs, const ch
  */
 
 std::ostream &operator<<(std::ostream &os, const glm::vec3 &v);
-
-#endif // UTILS_HPP

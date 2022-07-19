@@ -3,8 +3,7 @@
  * https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Kd-Tree_Accelerator.
  */
 
-#ifndef KDTREE_HPP
-#define KDTREE_HPP
+#pragma once
 
 #include <vector>
 
@@ -84,5 +83,3 @@ private:
     void createLeafNode(const std::vector<unsigned int> &trianglesIndices,
                         unsigned int parentNodeIdx, bool aboveSplit);
 };
-
-#endif // !KDTREE_HPP

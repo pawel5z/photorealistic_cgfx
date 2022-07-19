@@ -1,5 +1,4 @@
-#ifndef CAMERA_HPP
-#define CAMERA_HPP
+#pragma once
 
 #include "Transform.hpp"
 
@@ -48,5 +47,3 @@ private:
     glm::vec2 lr = glm::vec2(-10, 10);
     glm::vec2 bt = glm::vec2(-10, 10);
 };
-
-#endif //CAMERA_HPP

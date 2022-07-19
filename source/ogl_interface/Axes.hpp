@@ -1,3 +1,5 @@
+#pragma once
+
 #include "NoBuffDrawable.hpp"
 
 class Axes : NoBuffDrawable {

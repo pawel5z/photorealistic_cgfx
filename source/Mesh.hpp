@@ -1,5 +1,4 @@
-#ifndef MESH_HPP
-#define MESH_HPP
+#pragma once
 
 #include <assimp/mesh.h>
 #include <glm/glm.hpp>
@@ -28,5 +27,3 @@ public:
     Mesh(const unsigned int firstTriangleIdx, const unsigned int trianglesCnt,
          const unsigned int matIdx);
 };
-
-#endif // MESH_HPP

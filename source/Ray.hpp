@@ -1,5 +1,4 @@
-#ifndef RAY_HPP
-#define RAY_HPP
+#pragma once
 
 #include <glm/glm.hpp>
 
@@ -12,5 +11,3 @@ public:
 
     Ray(glm::vec3 o, glm::vec3 d, float tMin = 0.f, float tMax = std::numeric_limits<float>::max());
 };
-
-#endif // !RAY_HPP

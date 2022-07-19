@@ -1,16 +1,12 @@
-#ifndef TRANSFORM_HPP
-#define TRANSFORM_HPP
+#pragma once
 
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/transform.hpp>
 
-enum Space {
-    SELF,
-    WORLD
-};
+enum Space { SELF, WORLD };
 
 class Transform {
 public:
@@ -40,5 +36,3 @@ protected:
     glm::mat4 getRotMat() const;
     glm::mat4 getModelMat() const;
 };
-
-#endif //TRANSFORM_HPP

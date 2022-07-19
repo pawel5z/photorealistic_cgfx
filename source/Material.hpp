@@ -1,5 +1,4 @@
-#ifndef MATERIAL_HPP
-#define MATERIAL_HPP
+#pragma once
 
 #include <assimp/material.h>
 #include <glm/glm.hpp>
@@ -18,5 +17,3 @@ public:
     Material(float ns, float ni, glm::vec3 ka, glm::vec3 kd, glm::vec3 ks, glm::vec3 ke);
     Material(aiMaterial *mat);
 };
-
-#endif // MATERIAL_HPP
