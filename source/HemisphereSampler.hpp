@@ -1,9 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <random>
-
 #include "Material.hpp"
+
+#include <glm/glm.hpp>
+
+#include <random>
 
 class HemisphereSampler {
 public:

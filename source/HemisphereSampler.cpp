@@ -1,8 +1,9 @@
+#include "HemisphereSampler.hpp"
+
 #include <glm/gtx/quaternion.hpp>
+
 #include <stdexcept>
 #include <tuple>
-
-#include "HemisphereSampler.hpp"
 
 // abstract hemisphere sampler
 

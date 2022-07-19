@@ -1,7 +1,8 @@
-#include <algorithm>
+#include "BRDFs.hpp"
+
 #include <glm/ext.hpp>
 
-#include "BRDFs.hpp"
+#include <algorithm>
 
 glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
                        const Material &mat) {

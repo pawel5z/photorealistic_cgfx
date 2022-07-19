@@ -1,3 +1,11 @@
+#include "RenderingTask.hpp"
+
+#include "BRDFs.hpp"
+#include "ogl_interface/Axes.hpp"
+#include "utils.hpp"
+
+#include "indicators/progress_bar.hpp"
+
 #include <OpenEXR/ImfChannelList.h>
 #include <OpenEXR/ImfFrameBuffer.h>
 #include <OpenEXR/ImfHeader.h>
@@ -5,21 +13,15 @@
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
+#include <glm/gtx/intersect.hpp>
+#include <glm/gtx/norm.hpp>
+
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <glm/gtx/intersect.hpp>
-#include <glm/gtx/norm.hpp>
 #include <iostream>
 #include <numeric>
-
-#include "RenderingTask.hpp"
-
-#include "BRDFs.hpp"
-#include "indicators/progress_bar.hpp"
-#include "ogl_interface/Axes.hpp"
-#include "utils.hpp"
 
 using namespace std::chrono_literals;
 using namespace std::string_literals;

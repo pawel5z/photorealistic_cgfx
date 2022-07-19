@@ -1,7 +1,7 @@
+#include "utils.hpp"
+
 #include <fstream>
 #include <vector>
-
-#include "utils.hpp"
 
 /**
  * >>>

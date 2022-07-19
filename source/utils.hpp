@@ -1,8 +1,8 @@
 #pragma once
 
 #include <epoxy/gl.h> // must be included before glm
-
 #include <glm/glm.hpp>
+
 #include <iostream>
 
 /**

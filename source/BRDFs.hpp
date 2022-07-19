@@ -1,8 +1,8 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include "Material.hpp"
+
+#include <glm/glm.hpp>
 
 glm::vec3 cookTorrance(const glm::vec3 &incoming, const glm::vec3 &outgoing, const glm::vec3 &n,
                        const Material &mat);

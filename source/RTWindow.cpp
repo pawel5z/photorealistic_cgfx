@@ -1,8 +1,9 @@
-#include <iostream>
-
 #include "RenderingTask.hpp"
+
 #include "ogl_interface/Axes.hpp"
 #include "utils.hpp"
+
+#include <iostream>
 
 RenderingTask::RTWindow::RTWindow(RenderingTask *rt) : rt(rt) {}
 

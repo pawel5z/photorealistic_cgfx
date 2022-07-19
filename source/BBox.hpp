@@ -1,9 +1,10 @@
 #pragma once
 
-#include <array>
+#include "Mesh.hpp"
+
 #include <glm/glm.hpp>
 
-#include "Mesh.hpp"
+#include <array>
 
 /**
  * @brief Bounding box.

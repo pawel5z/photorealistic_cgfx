@@ -5,13 +5,13 @@
 
 #pragma once
 
-#include <vector>
-
 #include "BBox.hpp"
 #include "BoundEdge.hpp"
 #include "Light.hpp"
 #include "Mesh.hpp"
 #include "Ray.hpp"
+
+#include <vector>
 
 struct KDTreeNode {
     union {

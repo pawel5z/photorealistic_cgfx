@@ -13,6 +13,7 @@
 #include <epoxy/glx.h>
 
 #include <GLFW/glfw3.h>
+
 #include <array>
 
 void AGLErrors(const char *comment); // Prints  Comment and error

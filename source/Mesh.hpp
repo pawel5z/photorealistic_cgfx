@@ -1,10 +1,11 @@
 #pragma once
 
+#include "Material.hpp"
+
 #include <assimp/mesh.h>
 #include <glm/glm.hpp>
-#include <vector>
 
-#include "Material.hpp"
+#include <vector>
 
 struct Vertex {
     glm::vec3 pos;

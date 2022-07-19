@@ -1,7 +1,7 @@
+#include "Light.hpp"
+
 #include <cstdio>
 #include <stdexcept>
-
-#include "Light.hpp"
 
 Light::Light(std::string spec) {
     if (sscanf(spec.c_str(), "L %f %f %f %f %f %f %f", &pos.x, &pos.y, &pos.z, &color.r, &color.g,

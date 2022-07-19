@@ -1,16 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <glm/glm.hpp>
-#include <memory>
-#include <mutex>
-#include <new>
-#include <queue>
-#include <random>
-#include <string>
-#include <thread>
-#include <vector>
-
 #include "HemisphereSampler.hpp"
 #include "KDTree.hpp"
 #include "Light.hpp"
@@ -19,6 +8,18 @@
 #include "Ray.hpp"
 #include "ogl_interface/AGL3Window.hpp"
 #include "ogl_interface/Camera.hpp"
+
+#include <glm/glm.hpp>
+
+#include <chrono>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <queue>
+#include <random>
+#include <string>
+#include <thread>
+#include <vector>
 
 #ifdef __cpp_lib_hardware_interference_size
 using std::hardware_destructive_interference_size;

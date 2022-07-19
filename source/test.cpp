@@ -1,10 +1,10 @@
-#include <algorithm>
-#include <cassert>
-#include <iostream>
-
 #include "HemisphereSampler.hpp"
 #include "Mesh.hpp"
 #include "utils.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <iostream>
 
 static void printSamplerResults(HemisphereSampler &&sampler, const Material *mat = nullptr) {
     for (int i = 0; i < 5; i++) {

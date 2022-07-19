@@ -1,7 +1,7 @@
+#include "Material.hpp"
+
 #include <iostream>
 #include <stdexcept>
-
-#include "Material.hpp"
 
 Material::Material(float ns, float ni, glm::vec3 ka, glm::vec3 kd, glm::vec3 ks, glm::vec3 ke)
     : ns(ns), ni(ni), ka(ka), kd(kd), ks(ks), ke(ke) {}

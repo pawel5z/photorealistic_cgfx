@@ -5,14 +5,14 @@
 // ==========================================================================
 // AGLWindow.cpp
 //===========================================================================
+#include "AGL3Window.hpp"
+
 #include <iostream>
 #include <stdexcept>
 #include <unistd.h>
 #include <vector>
 
 using namespace std;
-
-#include "AGL3Window.hpp"
 
 void AGLErrors(const char *comment) {
     GLenum er;
@@ -176,9 +176,7 @@ void AGLWindow::CallbackMousePos(GLFWwindow *window, double xp, double yp) {
         winPtr->MousePosCB(xp, yp);
 }
 
-bool AGLWindow::IsFullScreen() {
-    return glfwGetWindowMonitor(window) != nullptr;
-}
+bool AGLWindow::IsFullScreen() { return glfwGetWindowMonitor(window) != nullptr; }
 
 void AGLWindow::SetFullScreen(bool fullscreen) {
     if (IsFullScreen() == fullscreen)

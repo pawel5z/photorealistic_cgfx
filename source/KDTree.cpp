@@ -5,9 +5,10 @@
 
 #include "KDTree.hpp"
 
-#include <cmath>
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/norm.hpp>
+
+#include <cmath>
 #include <iostream>
 #include <random>
 #include <stdexcept>
