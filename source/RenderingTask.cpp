@@ -17,6 +17,7 @@
 #include "RenderingTask.hpp"
 
 #include "BRDFs.hpp"
+#include "indicators/progress_bar.hpp"
 #include "ogl_interface/Axes.hpp"
 #include "utils.hpp"
 
@@ -179,28 +180,20 @@ void RenderingTask::render() const {
     std::cout << "Rendering using " << concThreads << " thread" << (concThreads == 1 ? "" : "s")
               << "...\n";
     std::this_thread::yield();
+    indicators::ProgressBar bar(indicators::option::ShowElapsedTime(true),
+                                indicators::option::ShowRemainingTime(true),
+                                indicators::option::ShowPercentage(true),
+                                indicators::option::FontStyles(std::vector<indicators::FontStyle>{
+                                    indicators::FontStyle::bold}));
     while (true) {
         unsigned int progressSoFar = 0;
         for (const auto &counter : progress)
             progressSoFar += counter.counter;
-        float elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                            std::chrono::steady_clock::now() - begin)
-                            .count();
-        float left = float(width * height - progressSoFar) * elapsed / float(progressSoFar);
-        int elapsedMin = int(elapsed) / 60;
-        int elapsedSec = int(elapsed) % 60;
-        int leftMin = int(left) / 60;
-        int leftSec = int(left) % 60;
-        std::cerr << "\rprogress: " << progressSoFar * 100 / (width * height) << std::setfill('0')
-                  << "%, time elapsed: " << elapsedMin << ":" << std::setw(2) << elapsedSec
-                  << ", est. time left: " << leftMin << ":" << std::setw(2) << leftSec
-                  << "                                                               "
-                     "                 ";
+        bar.set_progress(progressSoFar * 100 / (width * height));
         if (progressSoFar == width * height)
             break;
         std::this_thread::sleep_for(1s);
     }
-    std::cout << "\n";
     for (auto &t : ts)
         t.join();
 
