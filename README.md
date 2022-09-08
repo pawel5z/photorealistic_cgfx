@@ -54,3 +54,33 @@ In absence of `UP` vector, one will be inferred from `VP` and `LA`.
 ![CornellBox-Glossy-16384](https://user-images.githubusercontent.com/45500957/189184035-b2c55447-c248-4de1-ae56-03800b0cfc08.png)
 
 ![conference-8192-0](https://user-images.githubusercontent.com/45500957/189184566-5e93ab54-fbe4-4a52-ae62-fae7b6c26781.png)
+
+## Usage
+
+```
+Usage: ./raytrace [OPTION...] RTC_FILE
+Render scene specified in RTC_FILE using ray tracing.
+Options:
+  -h [ --help ]                Print this help message.
+  -n [ --threads ] arg (=-1)   Number of threads used for rendering. -1 
+                               (default) means number of available CPU cores.
+  -s [ --samples ] arg (=1024) Number of samples per pixel.
+  -p [ --preview ]             Preview scene.
+                               Controls:
+                                LMB+move: look around
+                                w: move forward
+                                s: move backward
+                                a: move left
+                                d: move right
+                                r: move up
+                                f: move down
+                                e: roll right
+                                q: roll left
+                                backspace: reset view
+                                left shift: accelerate
+                                left ctrl: decelerate
+                                enter: overwrite rtc file camera settings with 
+                                       current ones
+                                space: render current view
+                                esc: quit
+```
