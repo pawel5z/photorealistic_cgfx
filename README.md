@@ -84,3 +84,19 @@ Options:
                                 space: render current view
                                 esc: quit
 ```
+
+## Requirements
+
+### Required libraries
+
+* Assimp
+* OpenGL
+* GLFW
+* Boost Program Options
+* OpenEXR
+
+On Debian-based distributions, the above can be installed with
+
+```
+sudo apt install libassimp-dev libepoxy-dev libgl-dev libglfw3-dev libboost-program-options-dev libopenexr-dev
+```
