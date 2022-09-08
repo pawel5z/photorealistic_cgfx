@@ -45,3 +45,13 @@ In absence of `UP` vector, one will be inferred from `VP` and `LA`.
   1
   ```
 </details>
+
+## Example renders
+
+![bmw-16384](https://user-images.githubusercontent.com/45500957/189182694-bca21816-6b21-47b2-8abf-315a50bb0246.png)
+
+![CornellBox-Original-4096](https://user-images.githubusercontent.com/45500957/189183893-79a3ce5b-4799-4176-802d-c4674e33b7cd.png)
+
+![CornellBox-Glossy-16384](https://user-images.githubusercontent.com/45500957/189184035-b2c55447-c248-4de1-ae56-03800b0cfc08.png)
+
+![conference-8192-0](https://user-images.githubusercontent.com/45500957/189184566-5e93ab54-fbe4-4a52-ae62-fae7b6c26781.png)
