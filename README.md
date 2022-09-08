@@ -2,7 +2,6 @@
 Path tracer developed during the Photorealistic Computer Graphics course @ Computer Science studies @ University of Wrocław.
 
 ## Features
-- Physically correct path tracing.
 - Fast ray-triangle intersection computation using k-d tree.
 - Output in EXR format.
 - Adjustable number of threads used during the rendering.
